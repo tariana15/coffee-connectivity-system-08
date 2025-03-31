@@ -58,7 +58,7 @@ const App = () => (
                 } 
               />
               <Route 
-                path="/register" 
+                path="/cash-register" 
                 element={
                   <ProtectedRoute>
                     <CashRegister />

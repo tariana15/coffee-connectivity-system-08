@@ -32,7 +32,7 @@ export const BottomNavigation = () => {
     {
       name: "Касса",
       icon: DollarSign,
-      href: "/register",
+      href: "/cash-register",
       allowed: true
     }
   ];
