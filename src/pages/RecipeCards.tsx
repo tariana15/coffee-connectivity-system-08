@@ -78,7 +78,7 @@ const RecipeCards = () => {
     const lines = csvText.split('\n');
     const result = [];
     
-    // Start from index 1 to skip header row
+    // Skip empty lines and header row
     for (let i = 1; i < lines.length; i++) {
       // Skip empty lines
       if (!lines[i].trim()) continue;
@@ -106,13 +106,14 @@ const RecipeCards = () => {
         row.push(currentValue.trim().replace(/^"|"$/g, ''));
       }
       
-      // Create an object with the row data
+      // Create an object with the row data - match columns with expected data
       if (row.length >= 3) {
         result.push({
           id: i,
-          name: row[0] || "",
-          ingredients: row[1] || "",
-          preparation: row[2] || ""
+          category: row[0] || "", // #Вид напитка
+          name: row[1] || "",     // #Название
+          ingredients: row[2] || "", // #Ингредиенты
+          preparation: row[3] || ""  // #Приготовление
         });
       }
     }
@@ -143,6 +144,7 @@ const RecipeCards = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Категория</TableHead>
                     <TableHead>Название</TableHead>
                     <TableHead>Ингредиенты</TableHead>
                     <TableHead>Способ приготовления</TableHead>
@@ -151,6 +153,7 @@ const RecipeCards = () => {
                 <TableBody>
                   {recipes.map((recipe) => (
                     <TableRow key={recipe.id}>
+                      <TableCell>{recipe.category}</TableCell>
                       <TableCell className="font-medium">{recipe.name}</TableCell>
                       <TableCell>{recipe.ingredients}</TableCell>
                       <TableCell>{recipe.preparation}</TableCell>
