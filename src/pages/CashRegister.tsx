@@ -25,6 +25,7 @@ interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  category: string; // Added the missing category property
 }
 
 const CashRegister = () => {
