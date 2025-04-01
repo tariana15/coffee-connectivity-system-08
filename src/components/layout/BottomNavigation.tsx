@@ -39,7 +39,8 @@ export const BottomNavigation = () => {
       name: "Чат",
       icon: MessageSquare,
       href: "/chat",
-      allowed: true
+      allowed: true,
+      badge: user?.coffeeShopName
     }
   ];
 

@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import { Image, Send, PaperclipIcon } from "lucide-react";
+import { Image, Send } from "lucide-react";
 import { format } from "date-fns";
 
 interface Message {
@@ -16,6 +16,7 @@ interface Message {
   content: string;
   timestamp: number;
   image?: string;
+  coffeeShopName: string; // Added to track which coffee shop this message belongs to
 }
 
 const Chat = () => {
@@ -29,21 +30,29 @@ const Chat = () => {
   useEffect(() => {
     // Load messages from localStorage
     const savedMessages = localStorage.getItem("chatMessages");
-    if (savedMessages) {
-      setMessages(JSON.parse(savedMessages));
-    } else {
+    if (savedMessages && user) {
+      const allMessages = JSON.parse(savedMessages);
+      // Filter messages by coffee shop name
+      const filteredMessages = allMessages.filter(
+        (message: Message) => 
+          message.coffeeShopName === user.coffeeShopName || 
+          message.userId === "system"
+      );
+      setMessages(filteredMessages);
+    } else if (user) {
       // Add a welcome message if no messages exist
       const welcomeMessage: Message = {
         id: "welcome",
         userId: "system",
         userName: "Система",
-        content: "Добро пожаловать в чат сотрудников! Обсуждайте рабочие вопросы и делитесь фотографиями.",
+        content: `Добро пожаловать в чат "${user.coffeeShopName}"! Обсуждайте рабочие вопросы и делитесь фотографиями.`,
         timestamp: Date.now(),
+        coffeeShopName: user.coffeeShopName
       };
       setMessages([welcomeMessage]);
       localStorage.setItem("chatMessages", JSON.stringify([welcomeMessage]));
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -61,11 +70,21 @@ const Chat = () => {
       content: newMessage,
       timestamp: Date.now(),
       image: imagePreview || undefined,
+      coffeeShopName: user.coffeeShopName
     };
 
-    const updatedMessages = [...messages, message];
-    setMessages(updatedMessages);
-    localStorage.setItem("chatMessages", JSON.stringify(updatedMessages));
+    // Get all messages from localStorage
+    const savedMessages = localStorage.getItem("chatMessages");
+    let allMessages = savedMessages ? JSON.parse(savedMessages) : [];
+    
+    // Add new message
+    allMessages = [...allMessages, message];
+    
+    // Update localStorage with all messages
+    localStorage.setItem("chatMessages", JSON.stringify(allMessages));
+    
+    // Update state with only messages for this coffee shop
+    setMessages(prev => [...prev, message]);
     setNewMessage("");
     setImagePreview(null);
   };
@@ -93,6 +112,11 @@ const Chat = () => {
       <div className="flex flex-col h-[calc(100vh-8rem)]">
         <div className="bg-background border-b p-4">
           <h1 className="text-xl font-semibold">Чат сотрудников</h1>
+          {user && (
+            <p className="text-sm text-muted-foreground">
+              Кофейня: {user.coffeeShopName}
+            </p>
+          )}
         </div>
 
         {/* Messages area */}
