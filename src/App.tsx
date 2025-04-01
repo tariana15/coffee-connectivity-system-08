@@ -17,9 +17,21 @@ import Analytics from "./pages/Analytics";
 import CashRegister from "./pages/CashRegister";
 import RecipeCards from "./pages/RecipeCards";
 import Schedule from "./pages/Schedule";
+import Invoices from "./pages/Invoices";
+import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 
+// Setup QueryClient
 const queryClient = new QueryClient();
+
+// Ensure mobile-only layout
+const MobileContainer = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div className="max-w-md mx-auto border-x border-border min-h-screen bg-background">
+      {children}
+    </div>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -28,63 +40,81 @@ const App = () => (
         <NotificationProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              
-              <Route 
-                path="/" 
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/inventory" 
-                element={
-                  <ProtectedRoute allowedRoles={["owner"]}>
-                    <Inventory />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/analytics" 
-                element={
-                  <ProtectedRoute allowedRoles={["owner"]}>
-                    <Analytics />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/cash-register" 
-                element={
-                  <ProtectedRoute>
-                    <CashRegister />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/recipe-cards" 
-                element={
-                  <ProtectedRoute>
-                    <RecipeCards />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/schedule" 
-                element={
-                  <ProtectedRoute>
-                    <Schedule />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <MobileContainer>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                
+                <Route 
+                  path="/" 
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/inventory" 
+                  element={
+                    <ProtectedRoute allowedRoles={["owner"]}>
+                      <Inventory />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/analytics" 
+                  element={
+                    <ProtectedRoute allowedRoles={["owner"]}>
+                      <Analytics />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/cash-register" 
+                  element={
+                    <ProtectedRoute>
+                      <CashRegister />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/recipe-cards" 
+                  element={
+                    <ProtectedRoute>
+                      <RecipeCards />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/schedule" 
+                  element={
+                    <ProtectedRoute>
+                      <Schedule />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/invoices" 
+                  element={
+                    <ProtectedRoute>
+                      <Invoices />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/chat" 
+                  element={
+                    <ProtectedRoute>
+                      <Chat />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </MobileContainer>
         </NotificationProvider>
       </AuthProvider>
     </TooltipProvider>
