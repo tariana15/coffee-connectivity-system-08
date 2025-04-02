@@ -8,6 +8,7 @@ import { Coffee, CreditCard, ShoppingBag, Clock, BanknoteIcon } from "lucide-rea
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BonusSystem } from "@/components/bonus/BonusSystem";
 
 // Demo data
 const MENU_ITEMS = [
@@ -34,6 +35,9 @@ interface SaleRecord {
   items: OrderItem[];
   total: number;
   timestamp: Date;
+  bonusApplied?: number;
+  customerPhone?: string;
+  bonusEarned?: number;
 }
 
 const CashRegister = () => {
@@ -47,6 +51,8 @@ const CashRegister = () => {
     totalSales: 0,
     transactions: 0
   });
+  const [bonusApplied, setBonusApplied] = useState(0);
+  const [customerPhone, setCustomerPhone] = useState("");
   const { toast } = useToast();
 
   const addToOrder = (item: typeof MENU_ITEMS[0]) => {
@@ -75,10 +81,18 @@ const CashRegister = () => {
     }
   };
 
-  const totalAmount = orderItems.reduce(
+  const rawTotalAmount = orderItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+  
+  // Final total amount after applying bonuses
+  const totalAmount = Math.max(0, rawTotalAmount - bonusApplied);
+
+  const handleApplyBonus = (amount: number, phone: string) => {
+    setBonusApplied(amount);
+    setCustomerPhone(phone);
+  };
 
   const handleCheckout = () => {
     if (orderItems.length === 0) {
@@ -90,12 +104,19 @@ const CashRegister = () => {
       return;
     }
 
+    // Default bonus percentage
+    const bonusPercent = 5;
+    const bonusEarned = customerPhone ? Math.floor(rawTotalAmount * bonusPercent / 100) : 0;
+
     // Create a sale record
     const saleRecord: SaleRecord = {
       id: `sale-${Date.now()}`,
       items: [...orderItems],
       total: totalAmount,
-      timestamp: new Date()
+      timestamp: new Date(),
+      bonusApplied: bonusApplied > 0 ? bonusApplied : undefined,
+      customerPhone: customerPhone || undefined,
+      bonusEarned: bonusEarned > 0 ? bonusEarned : undefined
     };
 
     // Update sales records
@@ -112,11 +133,24 @@ const CashRegister = () => {
       transactions: prev.transactions + 1
     }));
 
+    // Display appropriate message
+    let description = `Сумма: ${totalAmount} ₽`;
+    if (bonusApplied > 0) {
+      description += `, бонусы: -${bonusApplied} ₽`;
+    }
+    if (bonusEarned > 0) {
+      description += `, начислено: ${bonusEarned} ₽`;
+    }
+
     toast({
       title: "Заказ оплачен",
-      description: `Сумма: ${totalAmount} ₽`
+      description
     });
+
+    // Reset order
     setOrderItems([]);
+    setBonusApplied(0);
+    setCustomerPhone("");
   };
 
   const toggleShift = () => {
@@ -250,10 +284,35 @@ const CashRegister = () => {
                             ))}
                           </TableBody>
                         </Table>
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-medium">Итого:</span>
-                          <span className="text-lg font-bold">{totalAmount} ₽</span>
+                        
+                        {orderItems.length > 0 && (
+                          <BonusSystem 
+                            orderAmount={rawTotalAmount} 
+                            onApplyBonus={handleApplyBonus} 
+                          />
+                        )}
+                        
+                        <div className="space-y-2 pt-2">
+                          {bonusApplied > 0 && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span>Сумма заказа:</span>
+                              <span>{rawTotalAmount} ₽</span>
+                            </div>
+                          )}
+                          
+                          {bonusApplied > 0 && (
+                            <div className="flex items-center justify-between text-sm text-green-600">
+                              <span>Бонусы:</span>
+                              <span>-{bonusApplied} ₽</span>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center justify-between">
+                            <span className="text-lg font-medium">Итого:</span>
+                            <span className="text-lg font-bold">{totalAmount} ₽</span>
+                          </div>
                         </div>
+                        
                         <Button
                           className="w-full"
                           onClick={handleCheckout}
@@ -300,6 +359,22 @@ const CashRegister = () => {
                                     {item.name} x{item.quantity}
                                   </div>
                                 ))}
+                                {sale.customerPhone && (
+                                  <div className="mt-1 flex flex-wrap gap-1">
+                                    <Badge variant="outline" className="text-xs">
+                                      Бонусная карта
+                                    </Badge>
+                                    {sale.bonusApplied ? (
+                                      <Badge variant="outline" className="bg-green-50 text-xs text-green-700">
+                                        -{sale.bonusApplied}₽ бонусами
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="bg-blue-50 text-xs text-blue-700">
+                                        +{sale.bonusEarned}₽ бонусов
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell className="text-right font-medium">

@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, Package, LineChart, DollarSign, MessageSquare, FileText } from "lucide-react";
+import { Home, Package, LineChart, DollarSign, MessageSquare, FileText, BadgePercent } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +27,8 @@ export const BottomNavigation = () => {
       name: "Касса",
       icon: DollarSign,
       href: "/cash-register",
-      allowed: true
+      allowed: true,
+      badge: "Бонусы"
     },
     {
       name: "Накладные",
@@ -61,7 +62,13 @@ export const BottomNavigation = () => {
               location.pathname === item.href ? "text-primary" : "text-muted-foreground"
             )}
           >
-            <item.icon size={24} />
+            {item.name === "Касса" && (
+              <div className="relative">
+                <item.icon size={24} />
+                <BadgePercent className="absolute -right-2 -top-2 h-4 w-4 text-primary" />
+              </div>
+            )}
+            {item.name !== "Касса" && <item.icon size={24} />}
             <span className="text-xs">{item.name}</span>
           </Link>
         ))}
