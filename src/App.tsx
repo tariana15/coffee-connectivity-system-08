@@ -19,6 +19,7 @@ import RecipeCards from "./pages/RecipeCards";
 import Schedule from "./pages/Schedule";
 import Invoices from "./pages/Invoices";
 import Chat from "./pages/Chat";
+import Bonuses from "./pages/Bonuses";
 import NotFound from "./pages/NotFound";
 
 // Setup QueryClient
@@ -75,6 +76,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <CashRegister />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/bonuses" 
+                  element={
+                    <ProtectedRoute>
+                      <Bonuses />
                     </ProtectedRoute>
                   } 
                 />

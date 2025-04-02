@@ -14,6 +14,7 @@ interface BonusSystemProps {
 interface CustomerBonus {
   phoneNumber: string;
   bonusAmount: number;
+  registrationDate: string;
 }
 
 export const BonusSystem: React.FC<BonusSystemProps> = ({ orderAmount, onApplyBonus }) => {
@@ -76,15 +77,20 @@ export const BonusSystem: React.FC<BonusSystemProps> = ({ orderAmount, onApplyBo
         description: `${earnedBonus} бонусных рублей добавлено на счет ${phoneNumber}`
       });
     } else {
-      // Register new customer
-      const newCustomer = { phoneNumber, bonusAmount: earnedBonus };
+      // Register new customer with 50 initial bonus points + earned bonus
+      const initialBonus = 50;
+      const newCustomer = { 
+        phoneNumber, 
+        bonusAmount: initialBonus + earnedBonus,
+        registrationDate: new Date().toISOString()
+      };
       const updatedBonuses = [...customerBonuses, newCustomer];
       setCustomerBonuses(updatedBonuses);
       localStorage.setItem('customerBonuses', JSON.stringify(updatedBonuses));
       
       toast({
         title: "Новый клиент добавлен",
-        description: `${earnedBonus} бонусных рублей начислено на счет ${phoneNumber}`
+        description: `${initialBonus + earnedBonus} бонусных рублей начислено (50₽ приветственный бонус + ${earnedBonus}₽ за покупку)`
       });
     }
 

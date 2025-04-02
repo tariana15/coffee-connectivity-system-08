@@ -27,8 +27,13 @@ export const BottomNavigation = () => {
       name: "Касса",
       icon: DollarSign,
       href: "/cash-register",
-      allowed: true,
-      badge: "Бонусы"
+      allowed: true
+    },
+    {
+      name: "Бонусы",
+      icon: BadgePercent,
+      href: "/bonuses",
+      allowed: true
     },
     {
       name: "Накладные",
@@ -62,13 +67,11 @@ export const BottomNavigation = () => {
               location.pathname === item.href ? "text-primary" : "text-muted-foreground"
             )}
           >
-            {item.name === "Касса" && (
-              <div className="relative">
-                <item.icon size={24} />
-                <BadgePercent className="absolute -right-2 -top-2 h-4 w-4 text-primary" />
-              </div>
+            {item.name === "Бонусы" ? (
+              <BadgePercent size={24} />
+            ) : (
+              <item.icon size={24} />
             )}
-            {item.name !== "Касса" && <item.icon size={24} />}
             <span className="text-xs">{item.name}</span>
           </Link>
         ))}
