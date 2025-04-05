@@ -1,3 +1,4 @@
+
 import { MonthlyData, EmployeeSalary, SalaryConstants, EmployeeShift } from "@/types/salary";
 
 // Google Sheets API endpoint would typically go here
@@ -8,7 +9,7 @@ const SALARY_CONSTANTS: SalaryConstants = {
   hourlyRate: 250,
   revenueThreshold: 7000,
   percentageBelow: 0.05, // 5%
-  percentageAbove: 0.05  // Changed from 6% to 5%
+  percentageAbove: 0.05  // 5%
 };
 
 // Mock data based on the provided spreadsheet image
@@ -96,10 +97,8 @@ export const calculateSalary = (employee: EmployeeSalary, revenues: number[], co
     if (shift.worked) {
       dailySalary += constants.baseRate;
       
-      // Percentage from revenue if above threshold
-      if (revenue > constants.revenueThreshold) {
-        dailySalary += revenue * constants.percentageAbove;
-      } else if (revenue > 0) {
+      // Percentage from revenue
+      if (revenue > 0) {
         dailySalary += revenue * constants.percentageBelow;
       }
     }
@@ -109,7 +108,7 @@ export const calculateSalary = (employee: EmployeeSalary, revenues: number[], co
       dailySalary += shift.hours * constants.hourlyRate;
     }
     
-    // Delivery bonus - Changed to keep 36% (not 64%)
+    // Delivery bonus - 36% of delivery amount
     if (shift.delivery) {
       dailySalary += shift.delivery * 0.36;
     }

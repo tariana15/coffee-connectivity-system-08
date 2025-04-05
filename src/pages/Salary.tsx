@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { 
@@ -130,8 +131,7 @@ const Salary = () => {
           <CardContent>
             <div className="space-y-2 text-sm">
               <p>• За выход на смену (раб): <strong>2300₽</strong></p>
-              <p>• Процент от выручки при сумме до 7000₽: <strong>5%</strong></p>
-              <p>• Процент от выручки при сумме более 7000₽: <strong>5%</strong></p>
+              <p>• Процент от выручки: <strong>5%</strong></p>
               <p>• Оплата за час дополнительной работы: <strong>250₽</strong></p>
               <p>• За доставку: <strong>36%</strong> от суммы доставки</p>
             </div>
