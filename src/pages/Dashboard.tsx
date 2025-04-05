@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -57,7 +56,7 @@ const Dashboard = () => {
       name: "Заработная плата",
       icon: CreditCard,
       action: () => navigate("/salary"),
-      allowedFor: ["owner"]
+      allowedFor: ["owner", "employee"]
     },
     {
       name: "Накладные",

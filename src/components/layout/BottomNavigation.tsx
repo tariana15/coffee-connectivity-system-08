@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, Package, LineChart, DollarSign, MessageSquare, FileText, BadgePercent } from "lucide-react";
+import { Home, Package, LineChart, DollarSign, MessageSquare, FileText, BadgePercent, CreditCard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +47,12 @@ export const BottomNavigation = () => {
       href: "/chat",
       allowed: true,
       badge: user?.coffeeShopName
+    },
+    {
+      name: "Зарплата",
+      icon: CreditCard,
+      href: "/salary",
+      allowed: isOwner
     }
   ];
 
@@ -67,11 +73,7 @@ export const BottomNavigation = () => {
               location.pathname === item.href ? "text-primary" : "text-muted-foreground"
             )}
           >
-            {item.name === "Бонусы" ? (
-              <BadgePercent size={24} />
-            ) : (
-              <item.icon size={24} />
-            )}
+            <item.icon size={24} />
             <span className="text-xs">{item.name}</span>
           </Link>
         ))}

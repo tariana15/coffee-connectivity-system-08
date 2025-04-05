@@ -20,6 +20,7 @@ import Schedule from "./pages/Schedule";
 import Invoices from "./pages/Invoices";
 import Chat from "./pages/Chat";
 import Bonuses from "./pages/Bonuses";
+import Salary from "./pages/Salary";
 import NotFound from "./pages/NotFound";
 
 // Setup QueryClient
@@ -116,6 +117,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <Chat />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/salary" 
+                  element={
+                    <ProtectedRoute allowedRoles={["owner"]}>
+                      <Salary />
                     </ProtectedRoute>
                   } 
                 />
