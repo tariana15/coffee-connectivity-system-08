@@ -6,8 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
-import { Loader2, PlusCircle, FileText } from "lucide-react";
+import { Loader2, PlusCircle, FileText, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Invoice {
   id: string;
@@ -24,6 +35,8 @@ const Invoices = () => {
     date: format(new Date(), "yyyy-MM-dd"),
     amount: ""
   });
+  const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Load invoices from localStorage
@@ -66,6 +79,33 @@ const Invoices = () => {
       number: "",
       date: format(new Date(), "yyyy-MM-dd"),
       amount: ""
+    });
+    
+    toast({
+      title: "Накладная добавлена",
+      description: `Накладная #${invoice.number} успешно добавлена`,
+    });
+  };
+  
+  const handleDeleteInvoice = (id: string) => {
+    setInvoiceToDelete(id);
+  };
+  
+  const confirmDelete = () => {
+    if (!invoiceToDelete) return;
+    
+    const updatedInvoices = invoices.filter(invoice => invoice.id !== invoiceToDelete);
+    setInvoices(updatedInvoices);
+    
+    // Save to localStorage
+    localStorage.setItem("invoices", JSON.stringify(updatedInvoices));
+    
+    // Reset delete state
+    setInvoiceToDelete(null);
+    
+    toast({
+      title: "Накладная удалена",
+      description: "Накладная была успешно удалена",
     });
   };
 
@@ -140,7 +180,17 @@ const Invoices = () => {
             invoices.map((invoice) => (
               <Card key={invoice.id}>
                 <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-base">Накладная #{invoice.number}</CardTitle>
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-base">Накладная #{invoice.number}</CardTitle>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleDeleteInvoice(invoice.id)}
+                      className="h-8 w-8"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                   <div className="grid grid-cols-2 gap-2 text-sm">
@@ -159,6 +209,24 @@ const Invoices = () => {
           )}
         </div>
       </div>
+      
+      {/* Confirmation Dialog */}
+      <AlertDialog open={!!invoiceToDelete} onOpenChange={(open) => !open && setInvoiceToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие нельзя отменить. Накладная будет удалена навсегда.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };
