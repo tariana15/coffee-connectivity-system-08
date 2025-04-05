@@ -1,5 +1,5 @@
 
-import { MonthlyData, EmployeeSalary, SalaryConstants } from "@/types/salary";
+import { MonthlyData, EmployeeSalary, SalaryConstants, EmployeeShift } from "@/types/salary";
 
 // Google Sheets API endpoint would typically go here
 // For demo purposes, we'll use mock data based on the spreadsheet image
