@@ -1,21 +1,16 @@
-
-import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
-  allowedRoles?: ("owner" | "employee")[];
+  allowedRoles?: string[];
+  children?: React.ReactNode;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
-  children,
-  allowedRoles,
-}) => {
-  const { user, isLoading } = useAuth();
+const ProtectedRoute = ({ allowedRoles, children }: ProtectedRouteProps) => {
+  const { user, loading } = useAuth();
 
-  if (isLoading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  if (loading) {
+    return <div>Загрузка...</div>;
   }
 
   if (!user) {
@@ -23,8 +18,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
-  return <>{children}</>;
+  return children ? <>{children}</> : <Outlet />;
 };
+
+export default ProtectedRoute;
