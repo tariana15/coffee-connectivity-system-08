@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,7 +17,6 @@ import Analytics from "./pages/Analytics";
 import CashRegister from "./pages/CashRegister";
 import RecipeCards from "./pages/RecipeCards";
 import Schedule from "./pages/Schedule";
-import Invoices from "./pages/Invoices";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,17 +32,57 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/" element={<ProtectedRoute />}>
-                <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="inventory" element={<Inventory />} />
-                <Route path="analytics" element={<Analytics />} />
-                <Route path="cash-register" element={<CashRegister />} />
-                <Route path="recipe-cards" element={<RecipeCards />} />
-                <Route path="schedule" element={<Schedule />} />
-                <Route path="invoices" element={<Invoices />} />
-                <Route path="*" element={<NotFound />} />
-              </Route>
+              
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/inventory" 
+                element={
+                  <ProtectedRoute allowedRoles={["owner"]}>
+                    <Inventory />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/analytics" 
+                element={
+                  <ProtectedRoute allowedRoles={["owner"]}>
+                    <Analytics />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/cash-register" 
+                element={
+                  <ProtectedRoute>
+                    <CashRegister />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/recipe-cards" 
+                element={
+                  <ProtectedRoute>
+                    <RecipeCards />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/schedule" 
+                element={
+                  <ProtectedRoute>
+                    <Schedule />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
         </NotificationProvider>

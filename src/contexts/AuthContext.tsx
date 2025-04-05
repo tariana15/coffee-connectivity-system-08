@@ -64,13 +64,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Check if we already have users registered with this coffee shop
+      const allUsers = localStorage.getItem("coffeeShopUsers");
+      let coffeeShopUsers = allUsers ? JSON.parse(allUsers) : [];
+      
       const newUser: User = {
         ...userData,
         id: Math.random().toString(36).substring(2, 11)
       };
       
+      // Add user to coffee shop users list
+      coffeeShopUsers.push({
+        id: newUser.id,
+        name: newUser.name,
+        role: newUser.role,
+        coffeeShopName: newUser.coffeeShopName
+      });
+      
+      localStorage.setItem("coffeeShopUsers", JSON.stringify(coffeeShopUsers));
       setUser(newUser);
       localStorage.setItem("coffeeUser", JSON.stringify(newUser));
+      
+      // If this is a first-time shop, add a welcome message to the chat
+      const savedMessages = localStorage.getItem("chatMessages");
+      let allMessages = savedMessages ? JSON.parse(savedMessages) : [];
+      
+      // Check if we have any messages for this coffee shop already
+      const hasShopMessages = allMessages.some(
+        (message: any) => message.coffeeShopName === newUser.coffeeShopName
+      );
+      
+      if (!hasShopMessages) {
+        const welcomeMessage = {
+          id: `welcome-${newUser.coffeeShopName}`,
+          userId: "system",
+          userName: "Система",
+          content: `Кофейня "${newUser.coffeeShopName}" создана! Приглашайте сотрудников присоединиться, указав то же название кофейни при регистрации.`,
+          timestamp: Date.now(),
+          coffeeShopName: newUser.coffeeShopName
+        };
+        
+        allMessages.push(welcomeMessage);
+        localStorage.setItem("chatMessages", JSON.stringify(allMessages));
+      }
     } catch (error) {
       console.error("Register error:", error);
       throw error;

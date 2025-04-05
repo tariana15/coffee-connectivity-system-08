@@ -1,48 +1,40 @@
+
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
-import invoiceData from "../../techcard/Nacladnay.json";
-
-interface InvoiceItem {
-  name: string;
-  quantity: number;
-  unit: string;
-  price: number;
-}
+import { format } from "date-fns";
+import { Loader2, PlusCircle, FileText } from "lucide-react";
 
 interface Invoice {
-  id: number;
+  id: string;
+  number: string;
   date: string;
-  supplier: string;
-  items: InvoiceItem[];
-  total: number;
+  amount: number;
 }
 
 const Invoices = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newInvoice, setNewInvoice] = useState<Partial<Invoice>>({
-    date: new Date().toISOString().split('T')[0],
-    supplier: '',
-    items: [],
-    total: 0
+  const [loading, setLoading] = useState<boolean>(true);
+  const [newInvoice, setNewInvoice] = useState({
+    number: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+    amount: ""
   });
 
   useEffect(() => {
-    const loadInvoices = async () => {
+    // Load invoices from localStorage
+    const loadInvoices = () => {
       try {
-        setLoading(true);
-        setInvoices(invoiceData);
-      } catch (err) {
-        setError("Ошибка при загрузке накладных");
-        console.error(err);
+        const savedInvoices = localStorage.getItem("invoices");
+        if (savedInvoices) {
+          setInvoices(JSON.parse(savedInvoices));
+        }
+      } catch (error) {
+        console.error("Error loading invoices:", error);
       } finally {
         setLoading(false);
       }
@@ -51,56 +43,37 @@ const Invoices = () => {
     loadInvoices();
   }, []);
 
-  const handleAddItem = () => {
-    setNewInvoice(prev => ({
-      ...prev,
-      items: [...(prev.items || []), { name: '', quantity: 0, unit: '', price: 0 }]
-    }));
-  };
+  const handleAddInvoice = () => {
+    if (!newInvoice.number || !newInvoice.date || !newInvoice.amount) {
+      return;
+    }
 
-  const handleItemChange = (index: number, field: keyof InvoiceItem, value: string | number) => {
-    setNewInvoice(prev => {
-      const newItems = [...(prev.items || [])];
-      newItems[index] = { ...newItems[index], [field]: value };
-      return { ...prev, items: newItems };
-    });
-  };
-
-  const handleSaveInvoice = () => {
-    const total = newInvoice.items?.reduce((sum, item) => sum + (item.quantity * item.price), 0) || 0;
     const invoice: Invoice = {
-      id: invoices.length + 1,
-      date: newInvoice.date || new Date().toISOString().split('T')[0],
-      supplier: newInvoice.supplier || '',
-      items: newInvoice.items || [],
-      total
+      id: Date.now().toString(),
+      number: newInvoice.number,
+      date: newInvoice.date,
+      amount: parseFloat(newInvoice.amount)
     };
 
-    setInvoices(prev => [...prev, invoice]);
-    setIsDialogOpen(false);
+    const updatedInvoices = [...invoices, invoice];
+    setInvoices(updatedInvoices);
+    
+    // Save to localStorage
+    localStorage.setItem("invoices", JSON.stringify(updatedInvoices));
+    
+    // Reset form
     setNewInvoice({
-      date: new Date().toISOString().split('T')[0],
-      supplier: '',
-      items: [],
-      total: 0
+      number: "",
+      date: format(new Date(), "yyyy-MM-dd"),
+      amount: ""
     });
   };
 
   if (loading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center h-full">
+        <div className="flex h-full items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      </MainLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-full">
-          <p className="text-red-500">{error}</p>
         </div>
       </MainLayout>
     );
@@ -109,112 +82,85 @@ const Invoices = () => {
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Накладные</h1>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog>
             <DialogTrigger asChild>
-              <Button>Добавить накладную</Button>
+              <Button size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Добавить
+              </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent>
               <DialogHeader>
-                <DialogTitle>Новая накладная</DialogTitle>
+                <DialogTitle>Добавить накладную</DialogTitle>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="date" className="text-right">Дата</Label>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="number">Номер накладной</Label>
+                  <Input
+                    id="number"
+                    value={newInvoice.number}
+                    onChange={(e) => setNewInvoice({ ...newInvoice, number: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="date">Дата поставки</Label>
                   <Input
                     id="date"
                     type="date"
                     value={newInvoice.date}
-                    onChange={(e) => setNewInvoice(prev => ({ ...prev, date: e.target.value }))}
-                    className="col-span-3"
+                    onChange={(e) => setNewInvoice({ ...newInvoice, date: e.target.value })}
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="supplier" className="text-right">Поставщик</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Сумма поставки</Label>
                   <Input
-                    id="supplier"
-                    value={newInvoice.supplier}
-                    onChange={(e) => setNewInvoice(prev => ({ ...prev, supplier: e.target.value }))}
-                    className="col-span-3"
+                    id="amount"
+                    type="number"
+                    value={newInvoice.amount}
+                    onChange={(e) => setNewInvoice({ ...newInvoice, amount: e.target.value })}
                   />
                 </div>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-semibold">Товары</h3>
-                    <Button onClick={handleAddItem} variant="outline">Добавить товар</Button>
-                  </div>
-                  {newInvoice.items?.map((item, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-4">
-                      <Input
-                        placeholder="Название"
-                        value={item.name}
-                        onChange={(e) => handleItemChange(index, 'name', e.target.value)}
-                        className="col-span-4"
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Количество"
-                        value={item.quantity}
-                        onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
-                        className="col-span-2"
-                      />
-                      <Input
-                        placeholder="Ед. изм."
-                        value={item.unit}
-                        onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
-                        className="col-span-2"
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Цена"
-                        value={item.price}
-                        onChange={(e) => handleItemChange(index, 'price', Number(e.target.value))}
-                        className="col-span-3"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={handleSaveInvoice}>Сохранить</Button>
+                <Button className="w-full" onClick={handleAddInvoice}>
+                  Сохранить
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
         </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Дата</TableHead>
-                <TableHead>Поставщик</TableHead>
-                <TableHead>Товары</TableHead>
-                <TableHead>Сумма</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoices.map((invoice) => (
-                <TableRow key={invoice.id}>
-                  <TableCell>{invoice.date}</TableCell>
-                  <TableCell>{invoice.supplier}</TableCell>
-                  <TableCell>
-                    <ul>
-                      {invoice.items.map((item, index) => (
-                        <li key={index}>
-                          {item.name} - {item.quantity} {item.unit} x {item.price} ₽
-                        </li>
-                      ))}
-                    </ul>
-                  </TableCell>
-                  <TableCell>{invoice.total} ₽</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+
+        <div className="space-y-4">
+          {invoices.length === 0 ? (
+            <div className="text-center py-8">
+              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+              <p className="mt-4 text-muted-foreground">Нет накладных</p>
+            </div>
+          ) : (
+            invoices.map((invoice) => (
+              <Card key={invoice.id}>
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-base">Накладная #{invoice.number}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Дата:</p>
+                      <p>{format(new Date(invoice.date), "dd.MM.yyyy")}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Сумма:</p>
+                      <p className="font-medium">{invoice.amount.toLocaleString()} ₽</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </div>
     </MainLayout>
   );
 };
 
-export default Invoices; 
+export default Invoices;
