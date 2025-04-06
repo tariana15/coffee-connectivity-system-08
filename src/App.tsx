@@ -35,12 +35,14 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
+              {/* Перенаправление с корневого пути на /index для правильной загрузки в мобильном приложении */}
+              <Route path="/" element={<Navigate to="/index" replace />} />
               <Route path="/index" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               
               <Route 
-                path="/" 
+                path="/dashboard" 
                 element={
                   <ProtectedRoute>
                     <Dashboard />
