@@ -22,6 +22,7 @@ import Invoices from "./pages/Invoices";
 import Bonuses from "./pages/Bonuses";
 import Salary from "./pages/Salary";
 import Chat from "./pages/Chat";
+import Index from "./pages/Index";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
+              <Route path="/index" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               
