@@ -18,6 +18,10 @@ import CashRegister from "./pages/CashRegister";
 import RecipeCards from "./pages/RecipeCards";
 import Schedule from "./pages/Schedule";
 import NotFound from "./pages/NotFound";
+import Invoices from "./pages/Invoices";
+import Bonuses from "./pages/Bonuses";
+import Salary from "./pages/Salary";
+import Chat from "./pages/Chat";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +82,38 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Schedule />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/invoices" 
+                element={
+                  <ProtectedRoute>
+                    <Invoices />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/bonuses" 
+                element={
+                  <ProtectedRoute>
+                    <Bonuses />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/salary" 
+                element={
+                  <ProtectedRoute allowedRoles={["owner"]}>
+                    <Salary />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/chat" 
+                element={
+                  <ProtectedRoute>
+                    <Chat />
                   </ProtectedRoute>
                 } 
               />
