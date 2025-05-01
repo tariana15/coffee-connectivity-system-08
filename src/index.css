@@ -111,4 +111,21 @@
   .metric-card {
     @apply flex flex-col rounded-xl border border-border bg-card p-4 shadow-sm;
   }
+  
+  /* Новые стили для календаря смен */
+  .shift-day-full {
+    @apply bg-primary/20 text-primary-foreground font-medium;
+  }
+  
+  .shift-day-half-morning {
+    @apply bg-gradient-to-b from-primary/20 to-transparent text-primary-foreground font-medium;
+  }
+  
+  .shift-day-half-evening {
+    @apply bg-gradient-to-t from-primary/20 to-transparent text-primary-foreground font-medium;
+  }
+  
+  .shift-pending {
+    @apply border-2 border-amber-400;
+  }
 }
