@@ -51,6 +51,11 @@ function Calendar({
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
+        // Добавляем классы для смен
+        day_shift_full: "shift-day-full",
+        day_shift_half_morning: "shift-day-half-morning",
+        day_shift_half_evening: "shift-day-half-evening",
+        day_shift_pending: "shift-pending",
         ...classNames,
       }}
       components={{

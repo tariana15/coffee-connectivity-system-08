@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BonusSystem } from "@/components/bonus/BonusSystem";
+import { deductIngredientsForSale } from "@/services/inventoryService";
+import { getRecipeByProductId } from "@/services/recipeService";
+import { Recipe } from "@/types/inventory";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 // Demo data
 const MENU_ITEMS = [
@@ -38,6 +41,7 @@ interface SaleRecord {
   bonusApplied?: number;
   customerPhone?: string;
   bonusEarned?: number;
+  inventoryUpdated?: boolean;
 }
 
 const CashRegister = () => {
@@ -54,6 +58,7 @@ const CashRegister = () => {
   const [bonusApplied, setBonusApplied] = useState(0);
   const [customerPhone, setCustomerPhone] = useState("");
   const { toast } = useToast();
+  const { addNotification } = useNotifications();
 
   const addToOrder = (item: typeof MENU_ITEMS[0]) => {
     const existingItem = orderItems.find(i => i.id === item.id);
@@ -94,6 +99,7 @@ const CashRegister = () => {
     setCustomerPhone(phone);
   };
 
+  // Обновленная функция оформления заказа с автоматическим списанием ингредиентов
   const handleCheckout = () => {
     if (orderItems.length === 0) {
       toast({
@@ -116,8 +122,43 @@ const CashRegister = () => {
       timestamp: new Date(),
       bonusApplied: bonusApplied > 0 ? bonusApplied : undefined,
       customerPhone: customerPhone || undefined,
-      bonusEarned: bonusEarned > 0 ? bonusEarned : undefined
+      bonusEarned: bonusEarned > 0 ? bonusEarned : undefined,
+      inventoryUpdated: true
     };
+
+    // Готовим данные для списания ингредиентов
+    const recipes: Recipe[] = [];
+    const quantities: number[] = [];
+    
+    // Собираем рецепты для всех товаров в заказе
+    orderItems.forEach(item => {
+      const recipe = getRecipeByProductId(item.id);
+      if (recipe) {
+        recipes.push(recipe);
+        quantities.push(item.quantity);
+      }
+    });
+    
+    // Выполняем списание ингредиентов
+    const { success, updatedItems, messages } = deductIngredientsForSale(
+      recipes,
+      quantities,
+      addNotification
+    );
+    
+    if (!success) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка при списании ингредиентов",
+        description: "Не удалось обновить данные об остатках"
+      });
+      return;
+    }
+    
+    // Если есть сообщения о низком запасе, показываем их в интерфейсе
+    if (messages.length > 0) {
+      console.log("Inventory notifications:", messages);
+    }
 
     // Update sales records
     setSales(prevSales => [...prevSales, saleRecord]);
@@ -374,6 +415,11 @@ const CashRegister = () => {
                                       </Badge>
                                     )}
                                   </div>
+                                )}
+                                {sale.inventoryUpdated && (
+                                  <Badge variant="outline" className="bg-purple-50 text-xs text-purple-700 w-fit">
+                                    Ингредиенты списаны
+                                  </Badge>
                                 )}
                               </div>
                             </TableCell>

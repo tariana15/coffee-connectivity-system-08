@@ -1,59 +1,22 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { Button } from "@/components/ui/button";
+import { getAllInventoryItems, updateInventoryItem } from "@/services/inventoryService";
+import { InventoryItem } from "@/types/inventory";
 
 const Inventory = () => {
   const { addNotification } = useNotifications();
-
-  // Demo data
-  const inventoryItems = [
-    {
-      id: 1,
-      name: "Кофейные зерна",
-      amount: 12,
-      unit: "кг",
-      status: "normal" // normal, low, critical
-    },
-    {
-      id: 2,
-      name: "Молоко",
-      amount: 5,
-      unit: "л",
-      status: "low"
-    },
-    {
-      id: 3,
-      name: "Шоколадный сироп",
-      amount: 0.5,
-      unit: "л",
-      status: "critical"
-    },
-    {
-      id: 4,
-      name: "Карамельный сироп",
-      amount: 2,
-      unit: "л",
-      status: "normal"
-    },
-    {
-      id: 5,
-      name: "Стаканы 250мл",
-      amount: 350,
-      unit: "шт",
-      status: "normal"
-    },
-    {
-      id: 6,
-      name: "Стаканы 350мл",
-      amount: 150,
-      unit: "шт",
-      status: "low"
-    }
-  ];
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  
+  useEffect(() => {
+    // Загружаем инвентарь при монтировании компонента
+    setInventoryItems(getAllInventoryItems());
+  }, []);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -66,24 +29,38 @@ const Inventory = () => {
     }
   };
 
+  const checkInventoryLevels = () => {
+    const lowItems = inventoryItems.filter(item => item.status === "low" || item.status === "critical");
+    
+    if (lowItems.length > 0) {
+      lowItems.forEach(item => {
+        addNotification({
+          title: item.status === "critical" ? "Критический запас!" : "Низкий запас",
+          message: `${item.name}: осталось ${item.amount} ${item.unit}`,
+          type: item.status === "critical" ? "error" : "warning"
+        });
+      });
+    } else {
+      addNotification({
+        title: "Проверка инвентаря",
+        message: "Все товары в достаточном количестве",
+        type: "success"
+      });
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-4">
         <h1 className="text-xl font-semibold">Учет товаров</h1>
         <div className="flex justify-between">
           <h2 className="text-lg font-medium">Остатки на складе</h2>
-          <button 
-            className="text-sm text-coffee-purple hover:underline"
-            onClick={() => {
-              addNotification({
-                title: "Проверка инвентаря",
-                message: "Обнаружены товары с низким запасом. Пожалуйста, пополните склад.",
-                type: "warning"
-              });
-            }}
+          <Button 
+            variant="outline"
+            onClick={checkInventoryLevels}
           >
             Проверить запасы
-          </button>
+          </Button>
         </div>
         <Card>
           <CardContent className="pt-6">
