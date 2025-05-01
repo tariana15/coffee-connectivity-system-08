@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Calendar } from "@/components/ui/calendar";
@@ -41,6 +40,12 @@ interface Shift {
   status: "scheduled" | "pending-change" | "pending-delete";
   requestedDate?: string; // ISO string for when change is requested
   requestedType?: "full" | "half-morning" | "half-evening";
+}
+
+// We need to define our own extended props for DayContent
+interface ExtendedDayContentProps {
+  date: Date;
+  displayMonth?: Date;
 }
 
 const Schedule = () => {
@@ -279,9 +284,7 @@ const Schedule = () => {
   );
   
   // Отображение значка на дате календаря
-  const getDayClassNames = (date: Date, view: "month" | "year" | "decade") => {
-    if (view !== "month") return "";
-    
+  const getDayClassNames = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
     
     // Проверка, выбрана ли дата (для владельца при назначении смен)
@@ -342,7 +345,14 @@ const Schedule = () => {
                     <Calendar
                       mode="multiple"
                       selected={selectedDates}
-                      onSelect={(date) => handleDateSelect(date)}
+                      onSelect={(dates) => {
+                        // Fixed: Handle the dates array or undefined properly
+                        if (dates instanceof Date) {
+                          handleDateSelect(dates);
+                        } else if (Array.isArray(dates)) {
+                          setSelectedDates(dates || []);
+                        }
+                      }}
                       className="rounded-md border"
                       locale={ru}
                       modifiers={{
@@ -352,8 +362,8 @@ const Schedule = () => {
                         selected: "bg-primary text-primary-foreground rounded-md"
                       }}
                       components={{
-                        DayContent: ({ date, view }) => (
-                          <div className={`w-full h-full flex items-center justify-center ${getDayClassNames(date, view)}`}>
+                        DayContent: ({ date }: ExtendedDayContentProps) => (
+                          <div className={`w-full h-full flex items-center justify-center ${getDayClassNames(date)}`}>
                             {date.getDate()}
                           </div>
                         )
@@ -603,8 +613,8 @@ const Schedule = () => {
                     className="rounded-md border"
                     locale={ru}
                     components={{
-                      DayContent: ({ date, view }) => (
-                        <div className={`w-full h-full flex items-center justify-center ${getDayClassNames(date, view)}`}>
+                      DayContent: ({ date }: ExtendedDayContentProps) => (
+                        <div className={`w-full h-full flex items-center justify-center ${getDayClassNames(date)}`}>
                           {date.getDate()}
                         </div>
                       )
