@@ -20,3 +20,34 @@ export interface Recipe {
   category: string;
   ingredients: RecipeIngredient[];
 }
+
+export interface OrderItem {
+  id: number;
+  name: string;
+  price: number;
+  quantity: number;
+  category: string;
+}
+
+export interface SaleRecord {
+  id: string;
+  items: OrderItem[];
+  total: number;
+  timestamp: Date;
+  bonusApplied?: number;
+  customerPhone?: string;
+  bonusEarned?: number;
+  inventoryUpdated?: boolean;
+  fiscalData?: {
+    fiscalSign: string;
+    fiscalDocumentNumber: string;
+    fiscalDriveNumber: string;
+  };
+}
+
+export interface ShiftStats {
+  coffeeCount: number;
+  foodCount: number;
+  totalSales: number;
+  transactions: number;
+}
