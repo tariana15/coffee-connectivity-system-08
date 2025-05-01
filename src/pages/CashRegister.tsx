@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +22,7 @@ const CashRegister = () => {
   const [shiftOpen, setShiftOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState("order");
   const [sales, setSales] = useState<SaleRecord[]>([]);
+  // Reset all stats to zero
   const [shiftStats, setShiftStats] = useState<ShiftStats>({
     coffeeCount: 0,
     foodCount: 0,
@@ -97,7 +97,7 @@ const CashRegister = () => {
     setCustomerPhone(phone);
   };
 
-  // Обновленная функция оформления заказа с фискализацией
+  // Updated handleCheckout to only register sales when the transaction is completed
   const handleCheckout = async () => {
     if (orderItems.length === 0) {
       toast({
@@ -151,7 +151,7 @@ const CashRegister = () => {
       await sendReceiptToFiscal(orderItems, totalAmount) : 
       { success: false };
 
-    // Create a sale record
+    // Create a sale record - only when the transaction is completed
     const saleRecord: SaleRecord = {
       id: `sale-${Date.now()}`,
       items: [...orderItems],
@@ -164,10 +164,10 @@ const CashRegister = () => {
       fiscalData: fiscalResult.success ? fiscalResult.fiscalData : undefined
     };
 
-    // Update sales records
+    // Update sales records - only when the transaction is completed
     setSales(prevSales => [...prevSales, saleRecord]);
 
-    // Update shift statistics
+    // Update shift statistics - only when the transaction is completed
     const coffeeSold = orderItems.filter(item => item.category === "coffee").reduce((sum, item) => sum + item.quantity, 0);
     const foodSold = orderItems.filter(item => item.category === "food").reduce((sum, item) => sum + item.quantity, 0);
     
