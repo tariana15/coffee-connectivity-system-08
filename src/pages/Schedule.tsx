@@ -346,11 +346,10 @@ const Schedule = () => {
                       mode="multiple"
                       selected={selectedDates}
                       onSelect={(dates) => {
-                        // Fixed: Handle the dates array or undefined properly
-                        if (dates instanceof Date) {
-                          handleDateSelect(dates);
-                        } else if (Array.isArray(dates)) {
+                        if (Array.isArray(dates)) {
                           setSelectedDates(dates || []);
+                        } else if (dates instanceof Date) {
+                          handleDateSelect(dates);
                         }
                       }}
                       className="rounded-md border"
@@ -377,7 +376,7 @@ const Schedule = () => {
                     />
                   </CardContent>
                 </Card>
-
+                
                 <div className="space-y-4">
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between">

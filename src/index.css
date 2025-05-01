@@ -112,7 +112,7 @@
     @apply flex flex-col rounded-xl border border-border bg-card p-4 shadow-sm;
   }
   
-  /* Новые стили для календаря смен */
+  /* Стили для календаря смен */
   .shift-day-full {
     @apply bg-primary/20 text-primary-foreground font-medium;
   }
