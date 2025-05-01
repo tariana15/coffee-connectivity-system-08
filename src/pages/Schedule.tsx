@@ -346,9 +346,11 @@ const Schedule = () => {
                       mode="multiple"
                       selected={selectedDates}
                       onSelect={(dates) => {
-                        if (Array.isArray(dates)) {
-                          setSelectedDates(dates || []);
-                        } else if (dates instanceof Date) {
+                        if (dates === undefined) {
+                          setSelectedDates([]);
+                        } else if (Array.isArray(dates)) {
+                          setSelectedDates(dates);
+                        } else {
                           handleDateSelect(dates);
                         }
                       }}
