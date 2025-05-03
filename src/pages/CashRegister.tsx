@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Coffee, CreditCard, ShoppingBag, Clock, Loader2 } from "lucide-react";
+import { Coffee, CreditCard, ShoppingBag, Clock, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +16,7 @@ import OrderSummary from "@/components/cash-register/OrderSummary";
 import SalesHistory from "@/components/cash-register/SalesHistory";
 import ShiftStatsDisplay from "@/components/cash-register/ShiftStats";
 import { sendReceiptToFiscal, checkFiscalServiceConnection } from "@/services/fiscalService";
-import { supabase } from "@/services/supabaseClient";
+import { supabase, checkDatabaseConnection } from "@/services/supabaseClient";
 
 const CashRegister = () => {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -37,96 +36,131 @@ const CashRegister = () => {
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [shiftId, setShiftId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dbConnected, setDbConnected] = useState(true);
+  const [menuError, setMenuError] = useState<string | null>(null);
   
   const { toast } = useToast();
   const { addNotification } = useNotifications();
+
+  // Check database connection
+  useEffect(() => {
+    const checkConnection = async () => {
+      const { connected, error } = await checkDatabaseConnection();
+      setDbConnected(connected);
+      
+      if (!connected) {
+        console.error("Database connection issue:", error);
+        toast({
+          variant: "destructive",
+          title: "Проблема подключения к базе данных",
+          description: "Используются локальные данные",
+        });
+      }
+    };
+    
+    checkConnection();
+  }, [toast]);
 
   // Load menu items and check fiscal connection
   useEffect(() => {
     const initialize = async () => {
       setLoading(true);
+      setMenuError(null);
       
-      // Check if there's an open shift in the database
-      const { data: shiftData } = await supabase
-        .from('shifts')
-        .select('*')
-        .eq('is_open', true)
-        .maybeSingle();
-      
-      if (shiftData) {
-        setShiftOpen(true);
-        setShiftId(shiftData.id);
-        
-        // Load sales for this shift
-        const { data: salesData } = await supabase
-          .from('sales')
-          .select('*')
-          .eq('shift_id', shiftData.id)
-          .order('timestamp', { ascending: false });
-        
-        if (salesData) {
-          setSales(salesData.map((sale: any) => ({
-            ...sale,
-            timestamp: new Date(sale.timestamp),
-            items: JSON.parse(sale.items_json || '[]')
-          })));
+      try {
+        // Check if there's an open shift in the database
+        if (dbConnected) {
+          const { data: shiftData, error: shiftError } = await supabase
+            .from('shifts')
+            .select('*')
+            .eq('is_open', true)
+            .maybeSingle();
           
-          // Calculate shift stats from sales
-          calculateShiftStats(salesData);
+          if (shiftError) {
+            console.error('Error checking open shifts:', shiftError);
+          }
+          
+          if (shiftData) {
+            setShiftOpen(true);
+            setShiftId(shiftData.id);
+            
+            // Load sales for this shift
+            const { data: salesData, error: salesError } = await supabase
+              .from('sales')
+              .select('*')
+              .eq('shift_id', shiftData.id)
+              .order('timestamp', { ascending: false });
+            
+            if (salesError) {
+              console.error('Error fetching sales:', salesError);
+            }
+            
+            if (salesData) {
+              const formattedSales = salesData.map((sale: any) => ({
+                ...sale,
+                timestamp: new Date(sale.timestamp),
+                items: sale.items_json ? JSON.parse(sale.items_json) : []
+              }));
+              
+              setSales(formattedSales);
+              
+              // Calculate shift stats from sales
+              calculateShiftStats(formattedSales);
+            }
+          }
         }
-      }
-      
-      // Load menu items
-      try {
-        const items = await getMenuItems();
-        setMenuItems(items);
-      } catch (error) {
-        console.error('Error loading menu items:', error);
-        toast({
-          variant: "destructive",
-          title: "Ошибка загрузки меню",
-          description: "Не удалось загрузить товары"
-        });
-      }
-      
-      // Check fiscal connection
-      try {
-        const connected = await checkFiscalServiceConnection();
-        setFiscalConnected(connected);
         
-        if (connected) {
-          toast({
-            title: "Подключено к ЭВОТОР",
-            description: "ККТ готова к работе"
-          });
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Ошибка подключения к ЭВОТОР",
-            description: "Проверьте настройки фискального регистратора"
-          });
+        // Load menu items
+        try {
+          const items = await getMenuItems();
+          setMenuItems(items);
+        } catch (error) {
+          console.error('Error loading menu items:', error);
+          setMenuError('Не удалось загрузить товары');
+        }
+        
+        // Check fiscal connection
+        try {
+          const connected = await checkFiscalServiceConnection();
+          setFiscalConnected(connected);
+          
+          if (connected) {
+            toast({
+              title: "Подключено к ЭВОТОР",
+              description: "ККТ готова к работе"
+            });
+          } else {
+            toast({
+              variant: "destructive",
+              title: "Ошибка подключения к ЭВОТОР",
+              description: "Проверьте настройки фискального регистратора"
+            });
+          }
+        } catch (error) {
+          console.error('Error checking fiscal connection:', error);
+          setFiscalConnected(false);
         }
       } catch (error) {
-        console.error('Error checking fiscal connection:', error);
+        console.error('Error initializing cash register:', error);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
     
     initialize();
-  }, [toast]);
+  }, [dbConnected, toast]);
 
   // Calculate shift stats from sales data
   const calculateShiftStats = (salesData: any[]) => {
     const stats = salesData.reduce((acc: ShiftStats, sale: any) => {
-      const items = JSON.parse(sale.items_json || '[]');
+      const items = sale.items || [];
       const coffeeSold = items.filter((item: any) => item.category === "coffee").reduce((sum: number, item: any) => sum + item.quantity, 0);
       const foodSold = items.filter((item: any) => item.category === "food").reduce((sum: number, item: any) => sum + item.quantity, 0);
       
       return {
         coffeeCount: acc.coffeeCount + coffeeSold,
         foodCount: acc.foodCount + foodSold,
-        totalSales: acc.totalSales + sale.total,
+        totalSales: acc.totalSales + (sale.total || 0),
         transactions: acc.transactions + 1
       };
     }, {
@@ -219,7 +253,7 @@ const CashRegister = () => {
       }
     }
     
-    // Выполняем списание ингредиентов
+    // ��ыполняем списание ингредиентов
     try {
       const { success, updatedItems, messages } = await deductIngredientsForSale(
         recipes,
@@ -326,10 +360,19 @@ const CashRegister = () => {
   };
 
   const toggleShift = async () => {
-    if (shiftOpen) {
-      // Close the shift
-      if (shiftId) {
-        try {
+    if (!dbConnected) {
+      toast({
+        variant: "destructive",
+        title: "Нет подключения к базе данных",
+        description: "Невозможно открыть или закрыть смену"
+      });
+      return;
+    }
+
+    try {
+      if (shiftOpen) {
+        // Close the shift
+        if (shiftId) {
           const { error } = await supabase
             .from('shifts')
             .update({ is_open: false, closed_at: new Date().toISOString() })
@@ -344,29 +387,25 @@ const CashRegister = () => {
             });
             return;
           }
-        } catch (error) {
-          console.error('Error closing shift:', error);
-          return;
+          
+          toast({
+            title: "Смена закрыта",
+            description: `Итоги смены: ${shiftStats.totalSales} ₽, ${shiftStats.transactions} транзакций`
+          });
+          
+          // Reset shift data when closing
+          setSales([]);
+          setShiftId(null);
+          setShiftStats({
+            coffeeCount: 0,
+            foodCount: 0,
+            totalSales: 0,
+            transactions: 0
+          });
+          setShiftOpen(false);
         }
-      }
-      
-      toast({
-        title: "Смена закрыта",
-        description: `Итоги смены: ${shiftStats.totalSales} ₽, ${shiftStats.transactions} транзакций`
-      });
-      
-      // Reset shift data when closing
-      setSales([]);
-      setShiftId(null);
-      setShiftStats({
-        coffeeCount: 0,
-        foodCount: 0,
-        totalSales: 0,
-        transactions: 0
-      });
-    } else {
-      // Open a new shift
-      try {
+      } else {
+        // Open a new shift
         const { data, error } = await supabase
           .from('shifts')
           .insert([{ opened_at: new Date().toISOString(), is_open: true }])
@@ -384,18 +423,22 @@ const CashRegister = () => {
         
         if (data && data[0]) {
           setShiftId(data[0].id);
+          setShiftOpen(true);
+          
+          toast({
+            title: "Смена открыта",
+            description: "Можно начинать работу"
+          });
         }
-      } catch (error) {
-        console.error('Error opening shift:', error);
-        return;
       }
-      
+    } catch (error) {
+      console.error('Error toggling shift:', error);
       toast({
-        title: "Смена открыта",
-        description: "Можно начинать работу"
+        variant: "destructive",
+        title: `Ошибка ${shiftOpen ? 'закрытия' : 'открытия'} смены`,
+        description: "Произошла непредвиденная ошибка"
       });
     }
-    setShiftOpen(!shiftOpen);
   };
 
   const formatTime = (date: Date) => {
@@ -413,8 +456,24 @@ const CashRegister = () => {
                 ЭВОТОР подключен
               </Badge>
             )}
-            <Button onClick={toggleShift} variant={shiftOpen ? "destructive" : "default"} disabled={loading}>
-              {shiftOpen ? "Закрыть смену" : "Открыть смену"}
+            {!dbConnected && (
+              <Badge variant="outline" className="bg-red-50 text-xs text-red-700">
+                БД не подключена
+              </Badge>
+            )}
+            <Button 
+              onClick={toggleShift} 
+              variant={shiftOpen ? "destructive" : "default"} 
+              disabled={loading || !dbConnected}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Загрузка...
+                </>
+              ) : (
+                shiftOpen ? "Закрыть смену" : "Открыть смену"
+              )}
             </Button>
           </div>
         </div>
@@ -423,6 +482,17 @@ const CashRegister = () => {
           <div className="flex h-[400px] flex-col items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-muted-foreground/50" />
             <p className="mt-4 text-muted-foreground">Загрузка данных...</p>
+          </div>
+        ) : !dbConnected ? (
+          <div className="flex h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
+            <AlertCircle className="mb-4 h-12 w-12 text-destructive/50" />
+            <h3 className="mb-2 text-lg font-semibold text-destructive">Нет подключения к базе данных</h3>
+            <p className="mb-4 text-muted-foreground">
+              Проверьте подключение к сети и настройки базы данных
+            </p>
+            <Button onClick={() => window.location.reload()}>
+              Повторить подключение
+            </Button>
           </div>
         ) : shiftOpen ? (
           <Tabs defaultValue="order" value={currentTab} onValueChange={setCurrentTab}>
@@ -440,7 +510,12 @@ const CashRegister = () => {
                     <CardDescription>Выберите товары для заказа</CardDescription>
                   </CardHeader>
                   <CardContent className="p-4">
-                    <ProductList items={menuItems} onAddToOrder={addToOrder} />
+                    <ProductList 
+                      items={menuItems} 
+                      onAddToOrder={addToOrder} 
+                      isLoading={loading}
+                      error={menuError}
+                    />
                   </CardContent>
                 </Card>
 
@@ -492,7 +567,7 @@ const CashRegister = () => {
             <p className="mb-4 text-muted-foreground">
               Откройте смену, чтобы начать работу с кассой
             </p>
-            <Button onClick={toggleShift}>Открыть смену</Button>
+            <Button onClick={toggleShift} disabled={!dbConnected}>Открыть смену</Button>
           </div>
         )}
       </div>
