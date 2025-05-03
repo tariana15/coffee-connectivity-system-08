@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -255,11 +256,6 @@ const CashRegister = () => {
       console.error("Error deducting ingredients:", error);
     }
 
-    // Отправляем данные в фискальную службу
-    const fiscalResult = fiscalConnected ? 
-      await sendReceiptToFiscal(orderItems, totalAmount) : 
-      { success: false };
-
     // Create a sale record - only when the transaction is completed
     const saleRecord: SaleRecord = {
       id: `sale-${Date.now()}`,
@@ -270,7 +266,7 @@ const CashRegister = () => {
       customerPhone: customerPhone || undefined,
       bonusEarned: bonusEarned > 0 ? bonusEarned : undefined,
       inventoryUpdated: true,
-      fiscalData: fiscalResult.success ? fiscalResult.fiscalData : undefined
+      fiscalData: undefined
     };
 
     // Store sale in Supabase
@@ -287,7 +283,7 @@ const CashRegister = () => {
             customer_phone: customerPhone || null,
             bonus_earned: bonusEarned > 0 ? bonusEarned : null,
             inventory_updated: true,
-            fiscal_data: fiscalResult.success ? JSON.stringify(fiscalResult.fiscalData) : null
+            fiscal_data: null
           }
         ])
         .select();
@@ -320,9 +316,6 @@ const CashRegister = () => {
     }
     if (bonusEarned > 0) {
       description += `, начислено: ${bonusEarned} ₽`;
-    }
-    if (fiscalResult.success) {
-      description += ", фискализировано ✓";
     }
 
     toast({

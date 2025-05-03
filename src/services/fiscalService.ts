@@ -1,10 +1,9 @@
 
 /**
- * Сервис для интеграции с фискальными решениями ЭВОТОР
+ * Сервис для фискализации платежей
  */
 
 import { OrderItem } from "@/types/inventory";
-import { useToast } from "@/hooks/use-toast";
 
 interface FiscalReceipt {
   id: string;
@@ -23,14 +22,14 @@ export async function sendReceiptToFiscal(
   total: number
 ): Promise<{ success: boolean; fiscalData?: FiscalReceipt["fiscalData"] }> {
   try {
-    console.log("Sending receipt to ЭВОТОР fiscal service...", {
+    console.log("Sending receipt to fiscal service...", {
       items,
       total,
       timestamp: new Date()
     });
     
-    // Имитация ответа от API ЭВОТОР
-    // В реальном приложении здесь был бы API-запрос к сервисам ЭВОТОР
+    // Имитация ответа от API фискального сервиса
+    // В реальном приложении здесь был бы API-запрос к фискальному сервису
     
     // Имитируем задержку запроса
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -63,7 +62,7 @@ function generateRandomString(length: number): string {
   return result;
 }
 
-// Проверка статуса соединения с ЭВОТОР
+// Проверка статуса соединения
 export function checkFiscalServiceConnection(): Promise<boolean> {
   return new Promise(resolve => {
     setTimeout(() => resolve(true), 300);
