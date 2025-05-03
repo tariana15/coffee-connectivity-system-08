@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Coffee, ShoppingBag, Loader2, AlertCircle } from "lucide-react";
+import { Coffee, ShoppingBag, Loader2, AlertCircle, RefreshCcw } from "lucide-react";
 
 interface ProductListProps {
   items: {
@@ -12,10 +12,11 @@ interface ProductListProps {
   }[];
   onAddToOrder: (item: any) => void;
   isLoading?: boolean;
-  error?: string;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
-const ProductList = ({ items, onAddToOrder, isLoading = false, error = null }: ProductListProps) => {
+const ProductList = ({ items, onAddToOrder, isLoading = false, error = null, onRetry }: ProductListProps) => {
   if (isLoading) {
     return (
       <div className="col-span-2 flex h-40 items-center justify-center text-muted-foreground">
@@ -27,9 +28,15 @@ const ProductList = ({ items, onAddToOrder, isLoading = false, error = null }: P
 
   if (error) {
     return (
-      <div className="col-span-2 flex h-40 items-center justify-center text-destructive">
-        <AlertCircle className="mr-2 h-5 w-5" />
-        <p>Ошибка загрузки: {error}</p>
+      <div className="col-span-2 flex flex-col h-40 items-center justify-center text-destructive">
+        <AlertCircle className="mb-2 h-5 w-5" />
+        <p className="text-center mb-4">Ошибка загрузки: {error}</p>
+        {onRetry && (
+          <Button variant="outline" size="sm" onClick={onRetry}>
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Повторить загрузку
+          </Button>
+        )}
       </div>
     );
   }

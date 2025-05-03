@@ -1,5 +1,5 @@
 
-import { supabase } from './supabaseClient';
+import { supabase, fetchTableData } from './supabaseClient';
 
 export interface MenuItem {
   id: number;
@@ -18,19 +18,11 @@ export const getMenuItems = async (): Promise<MenuItem[]> => {
   }
   
   try {
-    // Fetch menu items from Supabase
-    const { data, error } = await supabase
-      .from('menu_items')
-      .select('*')
-      .order('id');
+    // Fetch menu items from Supabase using the helper function
+    const { data, error } = await fetchTableData('menu_items');
     
-    if (error) {
-      console.error('Error fetching menu items:', error);
-      throw error;
-    }
-    
-    if (!data || data.length === 0) {
-      console.warn('No menu items found in database, using fallback data');
+    if (error || !data) {
+      console.warn('Error fetching menu items, using fallback data');
       return getFallbackMenuItems();
     }
     
