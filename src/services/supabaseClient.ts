@@ -3,10 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 
 // Using environment variables or direct URL since this is a public URL
 // Update this with your actual Supabase URL
-const supabaseUrl = 'https://yagizsbshnsouarydmrp.supabase.co';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 // Using anon key which is safe for browser usage
 // Update this with your actual anon key
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhZ2l6c2JzaG5zb3VhcnlkbXJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjA1MTk0OTcsImV4cCI6MjAzNjA5NTQ5N30.tFNwREqs6JP8gQYBi9LnsXbnP8-PrZTvpbLddzkFKhs';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Create and export the Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
