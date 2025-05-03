@@ -1,86 +1,44 @@
 
-import { useNotifications } from "@/contexts/NotificationContext";
+import { supabase } from './supabaseClient';
 import { InventoryItem, Recipe, RecipeIngredient } from "@/types/inventory";
 
-// Demo inventory data - в реальном приложении будет загружаться из базы данных
-let inventoryItems: InventoryItem[] = [
-  {
-    id: 1,
-    name: "Кофейные зерна",
-    amount: 12,
-    unit: "кг",
-    status: "normal",
-    minThreshold: 5,
-    criticalThreshold: 2
-  },
-  {
-    id: 2,
-    name: "Молоко",
-    amount: 5,
-    unit: "л",
-    status: "low",
-    minThreshold: 7,
-    criticalThreshold: 3
-  },
-  {
-    id: 3,
-    name: "Шоколадный сироп",
-    amount: 0.5,
-    unit: "л",
-    status: "critical",
-    minThreshold: 1,
-    criticalThreshold: 0.3
-  },
-  {
-    id: 4,
-    name: "Карамельный сироп",
-    amount: 2,
-    unit: "л",
-    status: "normal",
-    minThreshold: 1,
-    criticalThreshold: 0.5
-  },
-  {
-    id: 5,
-    name: "Стаканы 250мл",
-    amount: 350,
-    unit: "шт",
-    status: "normal",
-    minThreshold: 200,
-    criticalThreshold: 100
-  },
-  {
-    id: 6,
-    name: "Стаканы 350мл",
-    amount: 150,
-    unit: "шт",
-    status: "low",
-    minThreshold: 200,
-    criticalThreshold: 100
-  },
-  {
-    id: 7,
-    name: "Сливки",
-    amount: 3,
-    unit: "л",
-    status: "normal",
-    minThreshold: 1.5,
-    criticalThreshold: 0.5
-  },
-  {
-    id: 8,
-    name: "Ванильный сахар",
-    amount: 0.8,
-    unit: "кг",
-    status: "normal",
-    minThreshold: 0.5,
-    criticalThreshold: 0.2
-  }
-];
+// Cached inventory items
+let cachedInventoryItems: InventoryItem[] = [];
 
 // Функция получения всех ингредиентов
-export const getAllInventoryItems = (): InventoryItem[] => {
-  return inventoryItems;
+export const getAllInventoryItems = async (): Promise<InventoryItem[]> => {
+  // Return cached items if available
+  if (cachedInventoryItems.length > 0) {
+    return cachedInventoryItems;
+  }
+  
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .select('*');
+    
+  if (error) {
+    console.error('Error fetching inventory items:', error);
+    // Return fallback data
+    return [
+      {
+        id: 1,
+        name: "Кофейные зерна",
+        amount: 12,
+        unit: "кг",
+        status: "normal",
+        minThreshold: 5,
+        criticalThreshold: 2
+      },
+      // ... reduced fallback data
+    ];
+  }
+  
+  // Update status for all items
+  const itemsWithStatus = data.map(item => updateItemStatus(item));
+  
+  // Cache the results
+  cachedInventoryItems = itemsWithStatus;
+  return itemsWithStatus;
 };
 
 // Функция обновления статуса ингредиента на основе его количества
@@ -95,43 +53,59 @@ export const updateItemStatus = (item: InventoryItem): InventoryItem => {
 };
 
 // Функция для обновления количества ингредиента
-export const updateInventoryItem = (
+export const updateInventoryItem = async (
   itemId: number,
   newAmount: number
-): InventoryItem | undefined => {
-  const index = inventoryItems.findIndex((item) => item.id === itemId);
+): Promise<InventoryItem | undefined> => {
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .update({ amount: Math.max(0, newAmount) })
+    .eq('id', itemId)
+    .select()
+    .single();
+    
+  if (error) {
+    console.error('Error updating inventory item:', error);
+    return undefined;
+  }
   
-  if (index === -1) return undefined;
+  // Update the cached item
+  const updatedItem = updateItemStatus(data);
   
-  // Обновляем количество и пересчитываем статус
-  const updatedItem = updateItemStatus({
-    ...inventoryItems[index],
-    amount: Math.max(0, newAmount) // Не допускаем отрицательных значений
-  });
+  if (cachedInventoryItems.length > 0) {
+    cachedInventoryItems = cachedInventoryItems.map(item => 
+      item.id === itemId ? updatedItem : item
+    );
+  }
   
-  inventoryItems[index] = updatedItem;
   return updatedItem;
 };
 
 // Функция для вычитания ингредиентов из запаса при продаже
-export const deductIngredientsForSale = (
+export const deductIngredientsForSale = async (
   recipes: Recipe[],
   quantities: number[],
   addNotification: (notification: any) => void
-): { success: boolean; updatedItems: InventoryItem[]; messages: string[] } => {
+): Promise<{ success: boolean; updatedItems: InventoryItem[]; messages: string[] }> => {
   const updated: InventoryItem[] = [];
   const messages: string[] = [];
   
+  // Get the latest inventory data
+  const inventoryItems = await getAllInventoryItems();
+  
   // Проходим по всем рецептам
-  recipes.forEach((recipe, index) => {
-    const quantity = quantities[index];
-    if (!quantity) return;
+  for (let i = 0; i < recipes.length; i++) {
+    const recipe = recipes[i];
+    const quantity = quantities[i] || 0;
     
-    recipe.ingredients.forEach(ingredient => {
+    if (!quantity) continue;
+    
+    for (const ingredient of recipe.ingredients) {
       const inventoryItem = inventoryItems.find(item => item.id === ingredient.inventoryItemId);
+      
       if (!inventoryItem) {
         messages.push(`Ингредиент для ${recipe.name} не найден в базе`);
-        return;
+        continue;
       }
       
       // Рассчитываем необходимое количество ингредиента
@@ -139,7 +113,7 @@ export const deductIngredientsForSale = (
       
       // Вычитаем из запаса
       const newAmount = inventoryItem.amount - requiredAmount;
-      const updatedItem = updateInventoryItem(inventoryItem.id, newAmount);
+      const updatedItem = await updateInventoryItem(inventoryItem.id, newAmount);
       
       if (updatedItem) {
         updated.push(updatedItem);
@@ -161,8 +135,8 @@ export const deductIngredientsForSale = (
           messages.push(`Низкий запас: ${updatedItem.name}`);
         }
       }
-    });
-  });
+    }
+  }
   
   return { success: true, updatedItems: updated, messages };
 };

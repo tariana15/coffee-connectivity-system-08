@@ -8,15 +8,34 @@ import { useNotifications } from "@/contexts/NotificationContext";
 import { Button } from "@/components/ui/button";
 import { getAllInventoryItems, updateInventoryItem } from "@/services/inventoryService";
 import { InventoryItem } from "@/types/inventory";
+import { Loader2 } from "lucide-react";
 
 const Inventory = () => {
   const { addNotification } = useNotifications();
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
     // Загружаем инвентарь при монтировании компонента
-    setInventoryItems(getAllInventoryItems());
-  }, []);
+    const loadInventory = async () => {
+      setLoading(true);
+      try {
+        const items = await getAllInventoryItems();
+        setInventoryItems(items);
+      } catch (error) {
+        console.error("Error loading inventory:", error);
+        addNotification({
+          title: "Ошибка загрузки",
+          message: "Не удалось загрузить данные инвентаря",
+          type: "error"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadInventory();
+  }, [addNotification]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -58,30 +77,37 @@ const Inventory = () => {
           <Button 
             variant="outline"
             onClick={checkInventoryLevels}
+            disabled={loading}
           >
             Проверить запасы
           </Button>
         </div>
         <Card>
           <CardContent className="pt-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Наименование</TableHead>
-                  <TableHead>Количество</TableHead>
-                  <TableHead>Статус</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {inventoryItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>{item.amount} {item.unit}</TableCell>
-                    <TableCell>{getStatusBadge(item.status)}</TableCell>
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Наименование</TableHead>
+                    <TableHead>Количество</TableHead>
+                    <TableHead>Статус</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {inventoryItems.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell>{item.amount} {item.unit}</TableCell>
+                      <TableCell>{getStatusBadge(item.status)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -1,138 +1,73 @@
 
+import { supabase } from './supabaseClient';
 import { Recipe } from "@/types/inventory";
 
-// Обновленные рецепты для товаров меню на основе техкарты
-const RECIPES: Recipe[] = [
-  {
-    id: 1,
-    name: "Эспрессо",
-    category: "coffee",
-    ingredients: [
-      { inventoryItemId: 1, amount: 0.008 }, // 8 г кофейных зерен
-      { inventoryItemId: 5, amount: 1 } // 1 стакан 250мл
-    ]
-  },
-  {
-    id: 2,
-    name: "Американо",
-    category: "coffee",
-    ingredients: [
-      { inventoryItemId: 1, amount: 0.016 }, // 16 г кофейных зерен
-      { inventoryItemId: 5, amount: 1 } // 1 стакан 250мл
-    ]
-  },
-  {
-    id: 3,
-    name: "Капучино",
-    category: "coffee",
-    ingredients: [
-      { inventoryItemId: 1, amount: 0.008 }, // 8 г кофейных зерен
-      { inventoryItemId: 2, amount: 0.18 }, // 180 мл молока
-      { inventoryItemId: 5, amount: 1 } // 1 стакан 250мл
-    ]
-  },
-  {
-    id: 4,
-    name: "Латте",
-    category: "coffee",
-    ingredients: [
-      { inventoryItemId: 1, amount: 0.016 }, // 16 г кофейных зерен
-      { inventoryItemId: 2, amount: 0.25 }, // 250 мл молока
-      { inventoryItemId: 6, amount: 1 } // 1 стакан 350мл
-    ]
-  },
-  {
-    id: 5,
-    name: "Раф",
-    category: "coffee",
-    ingredients: [
-      { inventoryItemId: 1, amount: 0.016 }, // 16 г кофейных зерен
-      { inventoryItemId: 7, amount: 0.2 }, // 200 мл сливок
-      { inventoryItemId: 8, amount: 0.01 }, // 10 г ванильного сахара
-      { inventoryItemId: 6, amount: 1 } // 1 стакан 350мл
-    ]
-  },
-  {
-    id: 6,
-    name: "Флэт Уайт",
-    category: "coffee",
-    ingredients: [
-      { inventoryItemId: 1, amount: 0.016 }, // 16 г кофейных зерен
-      { inventoryItemId: 2, amount: 0.12 }, // 120 мл молока
-      { inventoryItemId: 5, amount: 1 } // 1 стакан 250мл
-    ]
-  },
-  {
-    id: 7,
-    name: "Мокко",
-    category: "coffee",
-    ingredients: [
-      { inventoryItemId: 1, amount: 0.016 }, // 16 г кофейных зерен
-      { inventoryItemId: 2, amount: 0.2 }, // 200 мл молока
-      { inventoryItemId: 3, amount: 0.02 }, // 20 мл шоколадного сиропа
-      { inventoryItemId: 6, amount: 1 } // 1 стакан 350мл
-    ]
-  },
-  {
-    id: 8,
-    name: "Карамель Макиато",
-    category: "coffee",
-    ingredients: [
-      { inventoryItemId: 1, amount: 0.016 }, // 16 г кофейных зерен
-      { inventoryItemId: 2, amount: 0.2 }, // 200 мл молока
-      { inventoryItemId: 4, amount: 0.02 }, // 20 мл карамельного сиропа
-      { inventoryItemId: 6, amount: 1 } // 1 стакан 350мл
-    ]
-  },
-  {
-    id: 9,
-    name: "Круассан",
-    category: "food",
-    ingredients: [] // Для простоты не детализируем ингредиенты еды
-  },
-  {
-    id: 10,
-    name: "Сэндвич",
-    category: "food",
-    ingredients: []
-  },
-  {
-    id: 11,
-    name: "Маффин",
-    category: "food",
-    ingredients: []
-  },
-  {
-    id: 12,
-    name: "Чизкейк",
-    category: "food",
-    ingredients: []
-  },
-  {
-    id: 13,
-    name: "Печенье",
-    category: "food",
-    ingredients: []
-  },
-  {
-    id: 14,
-    name: "Донат",
-    category: "food",
-    ingredients: []
-  }
-];
+// Cached recipes
+let cachedRecipes: Recipe[] = [];
 
 // Возвращает рецепт по ID продукта
-export const getRecipeByProductId = (productId: number): Recipe | undefined => {
-  return RECIPES.find(recipe => recipe.id === productId);
+export const getRecipeByProductId = async (productId: number): Promise<Recipe | undefined> => {
+  const recipes = await getAllRecipes();
+  return recipes.find(recipe => recipe.id === productId);
 };
 
 // Возвращает рецепт по названию продукта
-export const getRecipeByProductName = (productName: string): Recipe | undefined => {
-  return RECIPES.find(recipe => recipe.name === productName);
+export const getRecipeByProductName = async (productName: string): Promise<Recipe | undefined> => {
+  const recipes = await getAllRecipes();
+  return recipes.find(recipe => recipe.name === productName);
 };
 
 // Возвращает список всех рецептов
-export const getAllRecipes = (): Recipe[] => {
-  return RECIPES;
+export const getAllRecipes = async (): Promise<Recipe[]> => {
+  // Return cached recipes if available
+  if (cachedRecipes.length > 0) {
+    return cachedRecipes;
+  }
+  
+  // Fetch recipes with their ingredients using relationships
+  const { data, error } = await supabase
+    .from('recipes')
+    .select(`
+      id,
+      name,
+      category,
+      recipe_ingredients (
+        inventoryItemId: inventory_item_id,
+        amount
+      )
+    `);
+  
+  if (error) {
+    console.error('Error fetching recipes:', error);
+    // Return fallback data
+    return [
+      {
+        id: 1,
+        name: "Эспрессо",
+        category: "coffee",
+        ingredients: [
+          { inventoryItemId: 1, amount: 0.008 },
+          { inventoryItemId: 5, amount: 1 }
+        ]
+      },
+      // ... reduced fallback data for simplicity
+    ];
+  }
+  
+  // Transform the data to match our Recipe type
+  const recipes: Recipe[] = data.map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    ingredients: item.recipe_ingredients || []
+  }));
+  
+  // Cache the recipes
+  cachedRecipes = recipes;
+  return recipes;
+};
+
+// Function to refresh cache when needed
+export const refreshRecipes = () => {
+  cachedRecipes = [];
 };
