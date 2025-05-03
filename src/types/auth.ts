@@ -1,4 +1,5 @@
-export type UserRole = "owner" | "employee";
+
+export type UserRole = "owner" | "employee" | "manager";
 
 export interface User {
   id: string;
@@ -16,4 +17,6 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   register: (userData: Omit<User, "id"> & { password: string }) => Promise<void>;
+  addEmployee: (userData: Omit<User, "id" | "coffeeShopName"> & { password: string }) => Promise<User>;
+  getShopEmployees: () => Promise<User[]>;
 }

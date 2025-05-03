@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,15 +16,34 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 import { format } from "date-fns";
-import { Loader2, PlusCircle, FileText, Trash2 } from "lucide-react";
+import { Loader2, PlusCircle, FileText, Trash2, Camera, Upload, FilePlus2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { recognizeInvoiceFromImage } from "@/services/ocrService";
 
 interface Invoice {
   id: string;
   number: string;
   date: string;
   amount: number;
+  items?: InvoiceItem[];
+  verified: boolean;
+}
+
+interface InvoiceItem {
+  name: string;
+  category: string;
+  quantity: number;
+  price: number;
 }
 
 const Invoices = () => {
@@ -36,7 +55,18 @@ const Invoices = () => {
     amount: ""
   });
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isRecognizing, setIsRecognizing] = useState(false);
+  const [ocrResult, setOcrResult] = useState<{
+    number?: string;
+    date?: string;
+    amount?: string;
+    items?: InvoiceItem[];
+  } | null>(null);
+  const [showOcrDialog, setShowOcrDialog] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     // Load invoices from localStorage
@@ -65,7 +95,9 @@ const Invoices = () => {
       id: Date.now().toString(),
       number: newInvoice.number,
       date: newInvoice.date,
-      amount: parseFloat(newInvoice.amount)
+      amount: parseFloat(newInvoice.amount),
+      verified: false,
+      items: ocrResult?.items || []
     };
 
     const updatedInvoices = [...invoices, invoice];
@@ -80,6 +112,7 @@ const Invoices = () => {
       date: format(new Date(), "yyyy-MM-dd"),
       amount: ""
     });
+    setOcrResult(null);
     
     toast({
       title: "Накладная добавлена",
@@ -109,6 +142,89 @@ const Invoices = () => {
     });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile) {
+      toast({
+        title: "Ошибка",
+        description: "Пожалуйста, выберите файл",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsRecognizing(true);
+    try {
+      const result = await recognizeInvoiceFromImage(selectedFile);
+      setOcrResult(result);
+      
+      // Автоматически заполняем форму распознанными данными
+      if (result) {
+        setNewInvoice({
+          number: result.number || "",
+          date: result.date || format(new Date(), "yyyy-MM-dd"),
+          amount: result.amount || ""
+        });
+      }
+      
+      setShowOcrDialog(true);
+    } catch (error) {
+      console.error("OCR error:", error);
+      toast({
+        title: "Ошибка распознавания",
+        description: "Не удалось распознать данные из изображения",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRecognizing(false);
+    }
+  };
+
+  const handleCameraCapture = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const exportToCsv = () => {
+    if (invoices.length === 0) {
+      toast({
+        title: "Нет данных",
+        description: "Нет накладных для экспорта",
+      });
+      return;
+    }
+
+    // Создаем заголовок CSV
+    let csvContent = "Номер,Дата,Сумма\n";
+    
+    // Добавляем данные
+    invoices.forEach(invoice => {
+      const formattedDate = format(new Date(invoice.date), "dd.MM.yyyy");
+      csvContent += `${invoice.number},${formattedDate},${invoice.amount.toFixed(2)}\n`;
+    });
+    
+    // Создаем ссылку для скачивания
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `invoices_${format(new Date(), 'yyyyMMdd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Экспорт выполнен",
+      description: "Данные накладных успешно экспортированы в CSV",
+    });
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -121,53 +237,109 @@ const Invoices = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Накладные</h1>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Добавить
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Добавить накладную</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="number">Номер накладной</Label>
-                  <Input
-                    id="number"
-                    value={newInvoice.number}
-                    onChange={(e) => setNewInvoice({ ...newInvoice, number: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="date">Дата поставки</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={newInvoice.date}
-                    onChange={(e) => setNewInvoice({ ...newInvoice, date: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Сумма поставки</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    value={newInvoice.amount}
-                    onChange={(e) => setNewInvoice({ ...newInvoice, amount: e.target.value })}
-                  />
-                </div>
-                <Button className="w-full" onClick={handleAddInvoice}>
-                  Сохранить
+      <div className="container mx-auto py-2">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h1 className="text-xl md:text-2xl font-bold">Накладные</h1>
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant="outline" onClick={exportToCsv}>
+              <FilePlus2 className="mr-2 h-4 w-4" />
+              Экспорт CSV
+            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Добавить
                 </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent className={isMobile ? "w-[95%] max-w-md" : ""}>
+                <DialogHeader>
+                  <DialogTitle>Добавить накладную</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="number">Номер накладной</Label>
+                    <Input
+                      id="number"
+                      value={newInvoice.number}
+                      onChange={(e) => setNewInvoice({ ...newInvoice, number: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="date">Дата поставки</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={newInvoice.date}
+                      onChange={(e) => setNewInvoice({ ...newInvoice, date: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Сумма поставки</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      value={newInvoice.amount}
+                      onChange={(e) => setNewInvoice({ ...newInvoice, amount: e.target.value })}
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col space-y-2">
+                    <Label>Распознать из изображения</Label>
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        type="button" 
+                        onClick={handleCameraCapture}
+                      >
+                        <Camera className="mr-2 h-4 w-4" />
+                        Камера
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        type="button" 
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        Загрузить фото
+                      </Button>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept="image/*"
+                        className="hidden"
+                        capture={isMobile ? "environment" : undefined}
+                      />
+                    </div>
+                    {selectedFile && (
+                      <div className="mt-2 flex items-center space-x-2">
+                        <span className="text-sm text-muted-foreground truncate max-w-[200px]">
+                          {selectedFile.name}
+                        </span>
+                        <Button 
+                          size="sm" 
+                          disabled={isRecognizing} 
+                          onClick={handleFileUpload}
+                        >
+                          {isRecognizing ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : null}
+                          Распознать
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <Button className="w-full" onClick={handleAddInvoice}>
+                    Сохранить
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -177,38 +349,136 @@ const Invoices = () => {
               <p className="mt-4 text-muted-foreground">Нет накладных</p>
             </div>
           ) : (
-            invoices.map((invoice) => (
-              <Card key={invoice.id}>
-                <CardHeader className="p-4 pb-2">
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-base">Накладная #{invoice.number}</CardTitle>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => handleDeleteInvoice(invoice.id)}
-                      className="h-8 w-8"
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Дата:</p>
-                      <p>{format(new Date(invoice.date), "dd.MM.yyyy")}</p>
+            <div className={isMobile ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}>
+              {invoices.map((invoice) => (
+                <Card key={invoice.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                  <CardHeader className="p-4 pb-2">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-base">Накладная #{invoice.number}</CardTitle>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleDeleteInvoice(invoice.id)}
+                        className="h-8 w-8"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">Сумма:</p>
-                      <p className="font-medium">{invoice.amount.toLocaleString()} ₽</p>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Дата:</p>
+                        <p>{format(new Date(invoice.date), "dd.MM.yyyy")}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Сумма:</p>
+                        <p className="font-medium">{invoice.amount.toLocaleString()} ₽</p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                    
+                    {invoice.items && invoice.items.length > 0 && (
+                      <div className="mt-3 pt-3 border-t">
+                        <p className="text-sm font-medium mb-2">Позиции ({invoice.items.length}):</p>
+                        <div className="max-h-32 overflow-y-auto">
+                          <Table className="text-xs">
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="p-1">Название</TableHead>
+                                <TableHead className="p-1 text-right">Кол-во</TableHead>
+                                <TableHead className="p-1 text-right">Сумма</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {invoice.items.map((item, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell className="p-1 truncate max-w-[120px]">{item.name}</TableCell>
+                                  <TableCell className="p-1 text-right">{item.quantity}</TableCell>
+                                  <TableCell className="p-1 text-right">{item.price.toLocaleString()} ₽</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </div>
       </div>
+      
+      {/* OCR Results Dialog */}
+      <Dialog open={showOcrDialog} onOpenChange={setShowOcrDialog}>
+        <DialogContent className={isMobile ? "w-[95%] max-w-md" : ""}>
+          <DialogHeader>
+            <DialogTitle>Результаты распознавания</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            {ocrResult && (
+              <>
+                <div className="space-y-2">
+                  <Label>Номер накладной</Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      value={newInvoice.number} 
+                      onChange={(e) => setNewInvoice({ ...newInvoice, number: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Дата поставки</Label>
+                  <Input 
+                    type="date"
+                    value={newInvoice.date} 
+                    onChange={(e) => setNewInvoice({ ...newInvoice, date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Сумма</Label>
+                  <Input 
+                    type="number"
+                    value={newInvoice.amount} 
+                    onChange={(e) => setNewInvoice({ ...newInvoice, amount: e.target.value })}
+                  />
+                </div>
+                
+                {ocrResult.items && ocrResult.items.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Распознанные позиции</Label>
+                    <div className="max-h-48 overflow-y-auto border rounded-md">
+                      <Table className="text-sm">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="p-2">Название</TableHead>
+                            <TableHead className="p-2 text-right">Кол-во</TableHead>
+                            <TableHead className="p-2 text-right">Сумма</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {ocrResult.items.map((item, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="p-2">{item.name}</TableCell>
+                              <TableCell className="p-2 text-right">{item.quantity}</TableCell>
+                              <TableCell className="p-2 text-right">{item.price.toLocaleString()} ₽</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+                
+                <Button className="w-full" onClick={() => setShowOcrDialog(false)}>
+                  Подтвердить
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       
       {/* Confirmation Dialog */}
       <AlertDialog open={!!invoiceToDelete} onOpenChange={(open) => !open && setInvoiceToDelete(null)}>

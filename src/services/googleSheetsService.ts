@@ -1,15 +1,26 @@
+import { MonthlyData, EmployeeSalary, SalaryConstants, EmployeeShift, SalarySettings } from "@/types/salary";
 
-import { MonthlyData, EmployeeSalary, SalaryConstants, EmployeeShift } from "@/types/salary";
-
-// Google Sheets API endpoint would typically go here
-// For demo purposes, we'll use mock data based on the spreadsheet image
-
-const SALARY_CONSTANTS: SalaryConstants = {
+// Default salary constants
+const DEFAULT_SALARY_CONSTANTS: SalaryConstants = {
   baseRate: 2300,
   hourlyRate: 250,
   revenueThreshold: 7000,
   percentageBelow: 0.05, // 5%
   percentageAbove: 0.05  // 5%
+};
+
+// Function to fetch shifts count from localStorage
+const getShiftsCountData = () => {
+  try {
+    const shiftsData = localStorage.getItem('coffeeShopShiftsCount');
+    if (shiftsData) {
+      return JSON.parse(shiftsData);
+    }
+    return null;
+  } catch (error) {
+    console.error("Error retrieving shifts data:", error);
+    return null;
+  }
 };
 
 // Mock data based on the provided spreadsheet image
@@ -66,7 +77,8 @@ function generateMockShifts(days: number, workDays: string[], allowHours = false
       worked: worked,
       percentage: worked ? Math.random() * 500 : 0,
       hours: hours,
-      delivery: Math.random() > 0.8 ? Math.round(Math.random() * 1000) : 0
+      delivery: Math.random() > 0.8 ? Math.round(Math.random() * 1000) : 0,
+      shiftType: worked ? 'full' : (isHours ? 'half' : undefined)
     };
   });
 }
@@ -80,6 +92,29 @@ export const fetchSalaryData = async (month: string, year: string): Promise<Mont
   // Here we would typically make an API call like:
   // const response = await fetch(`/api/sheets?month=${month}&year=${year}`);
   // const data = await response.json();
+  
+  // Try to get the shifts count data from localStorage
+  const shiftsData = getShiftsCountData();
+  
+  // If we have shifts data for the current month, merge it with the mock data
+  if (shiftsData && shiftsData.month === month && shiftsData.year === year) {
+    // Map shifts count to the mock data employees
+    const updatedEmployees = mockAprilData.employees.map(employee => {
+      const employeeShifts = shiftsData.employees.find(e => e.name === employee.name);
+      if (employeeShifts) {
+        return {
+          ...employee,
+          shiftCount: employeeShifts.shiftCount
+        };
+      }
+      return employee;
+    });
+    
+    return {
+      ...mockAprilData,
+      employees: updatedEmployees
+    };
+  }
   
   return mockAprilData;
 };
@@ -95,11 +130,13 @@ export const calculateSalary = (employee: EmployeeSalary, revenues: number[], co
     
     // Base rate for showing up to work
     if (shift.worked) {
-      dailySalary += constants.baseRate;
+      // Adjust base rate based on shift type (full or half)
+      const baseRate = shift.shiftType === 'half' ? constants.baseRate / 2 : constants.baseRate;
+      dailySalary += baseRate;
       
-      // Percentage from revenue
-      if (revenue > 0) {
-        dailySalary += revenue * constants.percentageBelow;
+      // Percentage from revenue - percentage from revenue above threshold
+      if (revenue > constants.revenueThreshold) {
+        dailySalary += constants.percentageBelow * (revenue - constants.revenueThreshold);
       }
     }
     
@@ -129,7 +166,94 @@ export const calculateSalary = (employee: EmployeeSalary, revenues: number[], co
   };
 };
 
-// Function to get salary constants
-export const getSalaryConstants = (): SalaryConstants => {
-  return SALARY_CONSTANTS;
+// Function to save salary settings for a shop
+export const saveSalarySettings = (shopName: string, constants: SalaryConstants): void => {
+  try {
+    // Get existing settings
+    const settingsData = localStorage.getItem('coffeeShopSalarySettings');
+    let allSettings: SalarySettings[] = settingsData ? JSON.parse(settingsData) : [];
+    
+    // Find if settings for this shop already exist
+    const shopIndex = allSettings.findIndex(setting => setting.shopName === shopName);
+    
+    if (shopIndex >= 0) {
+      // Update existing settings
+      allSettings[shopIndex].constants = constants;
+    } else {
+      // Add new settings
+      allSettings.push({
+        shopName,
+        constants
+      });
+    }
+    
+    // Save back to localStorage
+    localStorage.setItem('coffeeShopSalarySettings', JSON.stringify(allSettings));
+  } catch (error) {
+    console.error("Error saving salary settings:", error);
+    throw error;
+  }
+};
+
+// Function to get salary constants for a specific shop
+export const getSalaryConstants = (shopName?: string): SalaryConstants => {
+  try {
+    if (!shopName) {
+      return DEFAULT_SALARY_CONSTANTS;
+    }
+    
+    // Get settings from localStorage
+    const settingsData = localStorage.getItem('coffeeShopSalarySettings');
+    if (!settingsData) {
+      return DEFAULT_SALARY_CONSTANTS;
+    }
+    
+    const allSettings: SalarySettings[] = JSON.parse(settingsData);
+    const shopSettings = allSettings.find(setting => setting.shopName === shopName);
+    
+    return shopSettings?.constants || DEFAULT_SALARY_CONSTANTS;
+  } catch (error) {
+    console.error("Error retrieving salary constants:", error);
+    return DEFAULT_SALARY_CONSTANTS;
+  }
+};
+
+// Функция для импорта товаров из Google Sheets
+export const importProductsFromSheet = async (sheetId: string, range: string): Promise<any[]> => {
+  try {
+    // Здесь будет реальный вызов Google Sheets API
+    // Для демонстрации используем мок-данные
+    const mockData = [
+      { name: "Эспрессо", price: 150, category: "coffee" },
+      { name: "Американо", price: 170, category: "coffee" },
+      { name: "Капучино", price: 250, category: "coffee" }
+    ];
+    return mockData;
+  } catch (error) {
+    console.error("Ошибка при импорте товаров из Google Sheets:", error);
+    throw error;
+  }
+};
+
+// Функция для обновления товаров в кассе
+export const updateCashRegisterProducts = async (products: any[]): Promise<void> => {
+  try {
+    // Сохраняем товары в localStorage
+    localStorage.setItem('cashRegisterProducts', JSON.stringify(products));
+  } catch (error) {
+    console.error("Ошибка при обновлении товаров в кассе:", error);
+    throw error;
+  }
+};
+
+// Функция для сброса статистики продаж
+export const resetSalesStatistics = (): void => {
+  try {
+    // Очищаем данные о продажах
+    localStorage.removeItem('salesRecords');
+    localStorage.removeItem('shiftStatistics');
+  } catch (error) {
+    console.error("Ошибка при сбросе статистики продаж:", error);
+    throw error;
+  }
 };

@@ -23,6 +23,7 @@ import Bonuses from "./pages/Bonuses";
 import Salary from "./pages/Salary";
 import Chat from "./pages/Chat";
 import Index from "./pages/Index";
+import SalesAnalytics from "./pages/SalesAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -52,7 +53,7 @@ const App = () => (
               <Route 
                 path="/inventory" 
                 element={
-                  <ProtectedRoute allowedRoles={["owner"]}>
+                  <ProtectedRoute allowedRoles={["owner", "manager"]}>
                     <Inventory />
                   </ProtectedRoute>
                 } 
@@ -60,8 +61,16 @@ const App = () => (
               <Route 
                 path="/analytics" 
                 element={
-                  <ProtectedRoute allowedRoles={["owner"]}>
+                  <ProtectedRoute allowedRoles={["owner", "manager"]}>
                     <Analytics />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/sales-analytics" 
+                element={
+                  <ProtectedRoute>
+                    <SalesAnalytics />
                   </ProtectedRoute>
                 } 
               />
@@ -108,7 +117,7 @@ const App = () => (
               <Route 
                 path="/salary" 
                 element={
-                  <ProtectedRoute allowedRoles={["owner"]}>
+                  <ProtectedRoute>
                     <Salary />
                   </ProtectedRoute>
                 } 

@@ -8,25 +8,31 @@ import { cn } from "@/lib/utils";
 export const BottomNavigation = () => {
   const location = useLocation();
   const { user } = useAuth();
-  const isOwner = user?.role === "owner";
+  const isOwnerOrManager = user?.role === "owner" || user?.role === "manager";
 
   const navItems = [
     {
       name: "Главная",
       icon: Home,
-      href: "/",
+      href: "/dashboard",
       allowed: true
     },
     {
       name: "Товары",
       icon: Package,
       href: "/inventory",
-      allowed: isOwner
+      allowed: isOwnerOrManager
     },
     {
       name: "Касса",
       icon: DollarSign,
       href: "/cash-register",
+      allowed: true
+    },
+    {
+      name: "Аналитика",
+      icon: LineChart,
+      href: "/sales-analytics",
       allowed: true
     },
     {
@@ -52,7 +58,7 @@ export const BottomNavigation = () => {
       name: "Зарплата",
       icon: CreditCard,
       href: "/salary",
-      allowed: isOwner
+      allowed: true
     }
   ];
 

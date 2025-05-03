@@ -3,6 +3,7 @@ import React from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   ResponsiveContainer, 
   BarChart, 
@@ -20,6 +21,8 @@ import {
 } from "recharts";
 
 const Analytics = () => {
+  const isMobile = useIsMobile();
+  
   // Demo data
   const monthlyData = [
     { name: "Янв", revenue: 250000, profit: 125000 },
@@ -52,38 +55,39 @@ const Analytics = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-4">
-        <h1 className="text-xl font-semibold">Аналитика</h1>
+      <div className="space-y-3">
+        <h1 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold`}>Аналитика</h1>
 
-        <Tabs defaultValue="revenue" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="revenue">Выручка</TabsTrigger>
-            <TabsTrigger value="sales">Продажи</TabsTrigger>
-            <TabsTrigger value="customers">Посетители</TabsTrigger>
+        <Tabs defaultValue="revenue" className="space-y-3">
+          <TabsList className={`${isMobile ? 'flex flex-wrap' : 'grid grid-cols-3'} w-full`}>
+            <TabsTrigger value="revenue" className={isMobile ? 'flex-1 text-xs px-1' : ''}>Выручка</TabsTrigger>
+            <TabsTrigger value="sales" className={isMobile ? 'flex-1 text-xs px-1' : ''}>Продажи</TabsTrigger>
+            <TabsTrigger value="customers" className={isMobile ? 'flex-1 text-xs px-1' : ''}>Посетители</TabsTrigger>
           </TabsList>
           
           <TabsContent value="revenue">
             <Card>
-              <CardHeader>
-                <CardTitle>Выручка и прибыль</CardTitle>
-                <CardDescription>
+              <CardHeader className={`${isMobile ? 'p-2 pb-1' : 'p-4 pb-2'}`}>
+                <CardTitle className={`${isMobile ? 'text-base' : 'text-lg'}`}>Выручка и прибыль</CardTitle>
+                <CardDescription className="text-xs">
                   Динамика выручки и прибыли по месяцам
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="h-[300px] w-full">
+              <CardContent className={`${isMobile ? 'p-1' : 'p-4'}`}>
+                <div className={`${isMobile ? 'h-[200px]' : 'h-[300px]'} w-full`}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={monthlyData}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      margin={isMobile ? { top: 5, right: 5, left: -15, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
+                      <XAxis dataKey="name" tick={{ fontSize: isMobile ? 8 : 12 }} />
+                      <YAxis tick={{ fontSize: isMobile ? 8 : 12 }} />
                       <Tooltip 
                         formatter={(value: number) => [`${value.toLocaleString()} ₽`, undefined]}
+                        contentStyle={isMobile ? { fontSize: '10px' } : undefined}
                       />
-                      <Legend />
+                      <Legend wrapperStyle={{ fontSize: isMobile ? 8 : 12 }} />
                       <Bar dataKey="revenue" name="Выручка" fill="#9b87f5" />
                       <Bar dataKey="profit" name="Прибыль" fill="#62C99C" />
                     </BarChart>
@@ -95,23 +99,23 @@ const Analytics = () => {
           
           <TabsContent value="sales">
             <Card>
-              <CardHeader>
-                <CardTitle>Структура продаж</CardTitle>
-                <CardDescription>
-                  Распределение продаж по категориям товаров
+              <CardHeader className={`${isMobile ? 'p-2 pb-1' : 'p-4 pb-2'}`}>
+                <CardTitle className={`${isMobile ? 'text-base' : 'text-lg'}`}>Структура продаж</CardTitle>
+                <CardDescription className="text-xs">
+                  Распределение по категориям товаров
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="h-[300px] w-full">
+              <CardContent className={`${isMobile ? 'p-1' : 'p-4'}`}>
+                <div className={`${isMobile ? 'h-[200px]' : 'h-[300px]'} w-full`}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={salesByCategory}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={100}
+                        labelLine={!isMobile}
+                        label={({ name, percent }) => isMobile ? `${(percent * 100).toFixed(0)}%` : `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={isMobile ? 60 : 100}
                         fill="#8884d8"
                         dataKey="value"
                       >
@@ -119,7 +123,8 @@ const Analytics = () => {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip contentStyle={isMobile ? { fontSize: '10px' } : undefined} />
+                      <Legend layout={isMobile ? "horizontal" : "vertical"} verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: isMobile ? 8 : 12 }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -129,24 +134,24 @@ const Analytics = () => {
           
           <TabsContent value="customers">
             <Card>
-              <CardHeader>
-                <CardTitle>Посетители</CardTitle>
-                <CardDescription>
+              <CardHeader className={`${isMobile ? 'p-2 pb-1' : 'p-4 pb-2'}`}>
+                <CardTitle className={`${isMobile ? 'text-base' : 'text-lg'}`}>Посетители</CardTitle>
+                <CardDescription className="text-xs">
                   Динамика количества посетителей по дням недели
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="h-[300px] w-full">
+              <CardContent className={`${isMobile ? 'p-1' : 'p-4'}`}>
+                <div className={`${isMobile ? 'h-[200px]' : 'h-[300px]'} w-full`}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
                       data={dailyCustomers}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      margin={isMobile ? { top: 5, right: 5, left: -15, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
+                      <XAxis dataKey="name" tick={{ fontSize: isMobile ? 8 : 12 }} />
+                      <YAxis tick={{ fontSize: isMobile ? 8 : 12 }} />
+                      <Tooltip contentStyle={isMobile ? { fontSize: '10px' } : undefined} />
+                      <Legend wrapperStyle={{ fontSize: isMobile ? 8 : 12 }} />
                       <Line type="monotone" dataKey="customers" name="Посетители" stroke="#9b87f5" activeDot={{ r: 8 }} />
                     </LineChart>
                   </ResponsiveContainer>

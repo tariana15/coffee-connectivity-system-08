@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -16,25 +15,25 @@ const Dashboard = () => {
   const isOwner = user?.role === "owner";
   const [period, setPeriod] = useState("today");
 
-  // Reset metrics data to zero as requested
+  // Demo data
   const metrics = {
     today: {
-      revenue: "0 ₽",
-      profit: "0 ₽",
-      averageCheck: "0 ₽",
-      checks: 0
+      revenue: "12500 ₽",
+      profit: "6250 ₽",
+      averageCheck: "350 ₽",
+      checks: 35
     },
     week: {
-      revenue: "0 ₽",
-      profit: "0 ₽",
-      averageCheck: "0 ₽",
-      checks: 0
+      revenue: "85000 ₽",
+      profit: "42500 ₽",
+      averageCheck: "380 ₽",
+      checks: 223
     },
     month: {
-      revenue: "0 ₽",
-      profit: "0 ₽",
-      averageCheck: "0 ₽",
-      checks: 0
+      revenue: "320000 ₽",
+      profit: "160000 ₽",
+      averageCheck: "375 ₽",
+      checks: 853
     }
   };
 

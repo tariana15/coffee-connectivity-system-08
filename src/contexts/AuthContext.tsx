@@ -21,6 +21,15 @@ const demoUsers: User[] = [
     role: "employee" as UserRole,
     avatarUrl: "/avatars/employee.png",
     coffeeShopName: "Уютная Кофейня"
+  },
+  {
+    id: "3",
+    name: "Менеджер Иван",
+    email: "manager@example.com",
+    role: "manager" as UserRole,
+    avatarUrl: "/avatars/owner.png",
+    coffeeShopName: "Уютная Кофейня",
+    employeeCount: 3
   }
 ];
 
@@ -43,7 +52,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const foundUser = demoUsers.find(u => u.email === email);
+      // First check if user exists in localStorage
+      const users = localStorage.getItem("coffeeShopUsers");
+      const allUsers = users ? JSON.parse(users) : [];
+      
+      // Check first in our regular users
+      let foundUser = allUsers.find((u: User) => u.email === email);
+      
+      // If not found, check in demo users
+      if (!foundUser) {
+        foundUser = demoUsers.find(u => u.email === email);
+      }
+      
       if (!foundUser) {
         throw new Error("Неверный email или пароль");
       }
@@ -68,18 +88,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const allUsers = localStorage.getItem("coffeeShopUsers");
       let coffeeShopUsers = allUsers ? JSON.parse(allUsers) : [];
       
+      // Assign a default avatar URL based on role
+      const avatarUrl = userData.avatarUrl || 
+        (userData.role === "owner" || userData.role === "manager" ? "/avatars/owner.png" : "/avatars/employee.png");
+      
       const newUser: User = {
         ...userData,
+        avatarUrl,
         id: Math.random().toString(36).substring(2, 11)
       };
       
       // Add user to coffee shop users list
-      coffeeShopUsers.push({
-        id: newUser.id,
-        name: newUser.name,
-        role: newUser.role,
-        coffeeShopName: newUser.coffeeShopName
-      });
+      coffeeShopUsers.push(newUser);
       
       localStorage.setItem("coffeeShopUsers", JSON.stringify(coffeeShopUsers));
       setUser(newUser);
@@ -115,13 +135,99 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const addEmployee = async (userData: Omit<User, "id" | "coffeeShopName"> & { password: string }): Promise<User> => {
+    setLoading(true);
+    try {
+      if (!user) {
+        throw new Error("Вы должны быть авторизованы для добавления сотрудников");
+      }
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Get all users
+      const allUsers = localStorage.getItem("coffeeShopUsers");
+      let coffeeShopUsers = allUsers ? JSON.parse(allUsers) : [];
+      
+      // Check if user with this email already exists
+      const existingUser = coffeeShopUsers.find((u: User) => u.email === userData.email);
+      if (existingUser) {
+        throw new Error("Пользователь с таким email уже существует");
+      }
+      
+      // Create new user with same coffee shop name as current user
+      const avatarUrl = userData.avatarUrl || 
+        (userData.role === "manager" ? "/avatars/owner.png" : "/avatars/employee.png");
+      
+      const newUser: User = {
+        ...userData,
+        coffeeShopName: user.coffeeShopName,
+        avatarUrl,
+        id: Math.random().toString(36).substring(2, 11)
+      };
+      
+      // Add user to coffee shop users list
+      coffeeShopUsers.push(newUser);
+      
+      // Update employee count for owner
+      if (user.role === "owner" || user.role === "manager") {
+        const updatedUser = {
+          ...user,
+          employeeCount: (user.employeeCount || 0) + 1
+        };
+        
+        // Update current user in state and storage
+        setUser(updatedUser);
+        localStorage.setItem("coffeeUser", JSON.stringify(updatedUser));
+        
+        // Update in the full list
+        const userIndex = coffeeShopUsers.findIndex((u: User) => u.id === user.id);
+        if (userIndex >= 0) {
+          coffeeShopUsers[userIndex] = updatedUser;
+        }
+      }
+      
+      localStorage.setItem("coffeeShopUsers", JSON.stringify(coffeeShopUsers));
+      
+      return newUser;
+    } catch (error) {
+      console.error("Add employee error:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getShopEmployees = async (): Promise<User[]> => {
+    if (!user) {
+      return [];
+    }
+    
+    // Get all users
+    const allUsers = localStorage.getItem("coffeeShopUsers");
+    const coffeeShopUsers = allUsers ? JSON.parse(allUsers) : [];
+    
+    // Filter users by coffee shop name
+    return coffeeShopUsers.filter((u: User) => 
+      u.coffeeShopName === user.coffeeShopName && u.id !== user.id
+    );
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem("coffeeUser");
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      register, 
+      logout, 
+      addEmployee, 
+      getShopEmployees 
+    }}>
       {children}
     </AuthContext.Provider>
   );

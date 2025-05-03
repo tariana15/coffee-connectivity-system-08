@@ -13,6 +13,7 @@ export interface EmployeeShift {
   percentage: number;
   hours?: number;
   delivery?: number;
+  shiftType?: 'full' | 'half';
 }
 
 export interface EmployeeSalary {
@@ -21,6 +22,7 @@ export interface EmployeeSalary {
   firstHalfTotal: number;
   secondHalfTotal: number;
   monthTotal: number;
+  shiftCount?: number;
 }
 
 export interface MonthlyData {
@@ -29,4 +31,43 @@ export interface MonthlyData {
   days: number;
   revenues: number[];
   employees: EmployeeSalary[];
+}
+
+export interface ProductCategory {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface ProductIngredient {
+  name: string;
+  amount: number;
+  unit: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  ingredients: ProductIngredient[];
+}
+
+export interface SalesData {
+  categories: {
+    name: string;
+    value: number;
+    color: string;
+  }[];
+  products: {
+    id: string;
+    name: string;
+    quantity: number;
+    category: string;
+  }[];
+}
+
+export interface SalarySettings {
+  shopName: string;
+  constants: SalaryConstants;
 }
