@@ -8,7 +8,7 @@ export const getProducts = async (): Promise<Product[]> => {
     .order('created_at', { ascending: false });
   
   if (error) throw error;
-  return data || [];
+  return data;
 };
 
 export const addProduct = async (product: Omit<Product, 'id' | 'created_at'>): Promise<Product> => {
@@ -85,6 +85,7 @@ export const openShift = async (): Promise<Shift> => {
     .insert([{
       is_open: true,
       opened_at: new Date().toISOString(),
+      shift_date:new Date().toISOString(),
       total_sales: 0,
       transactions: 0,
       coffee_count: 0,
