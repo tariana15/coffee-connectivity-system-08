@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Coffee, ShoppingBag, Loader2 } from "lucide-react";
+import { Coffee, ShoppingBag, Loader2, AlertCircle } from "lucide-react";
 
 interface ProductListProps {
   items: {
@@ -28,6 +28,7 @@ const ProductList = ({ items, onAddToOrder, isLoading = false, error = null }: P
   if (error) {
     return (
       <div className="col-span-2 flex h-40 items-center justify-center text-destructive">
+        <AlertCircle className="mr-2 h-5 w-5" />
         <p>Ошибка загрузки: {error}</p>
       </div>
     );

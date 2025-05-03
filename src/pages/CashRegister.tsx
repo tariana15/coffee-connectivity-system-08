@@ -15,7 +15,6 @@ import ProductList from "@/components/cash-register/ProductList";
 import OrderSummary from "@/components/cash-register/OrderSummary";
 import SalesHistory from "@/components/cash-register/SalesHistory";
 import ShiftStatsDisplay from "@/components/cash-register/ShiftStats";
-import { sendReceiptToFiscal, checkFiscalServiceConnection } from "@/services/fiscalService";
 import { supabase, checkDatabaseConnection } from "@/services/supabaseClient";
 
 const CashRegister = () => {
@@ -32,7 +31,6 @@ const CashRegister = () => {
   });
   const [bonusApplied, setBonusApplied] = useState(0);
   const [customerPhone, setCustomerPhone] = useState("");
-  const [fiscalConnected, setFiscalConnected] = useState(false);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [shiftId, setShiftId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,7 +59,7 @@ const CashRegister = () => {
     checkConnection();
   }, [toast]);
 
-  // Load menu items and check fiscal connection
+  // Load menu items and check shift status
   useEffect(() => {
     const initialize = async () => {
       setLoading(true);
@@ -119,27 +117,6 @@ const CashRegister = () => {
           setMenuError('Не удалось загрузить товары');
         }
         
-        // Check fiscal connection
-        try {
-          const connected = await checkFiscalServiceConnection();
-          setFiscalConnected(connected);
-          
-          if (connected) {
-            toast({
-              title: "Подключено к ЭВОТОР",
-              description: "ККТ готова к работе"
-            });
-          } else {
-            toast({
-              variant: "destructive",
-              title: "Ошибка подключения к ЭВОТОР",
-              description: "Проверьте настройки фискального регистратора"
-            });
-          }
-        } catch (error) {
-          console.error('Error checking fiscal connection:', error);
-          setFiscalConnected(false);
-        }
       } catch (error) {
         console.error('Error initializing cash register:', error);
       } finally {
@@ -451,11 +428,6 @@ const CashRegister = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Касса</h1>
           <div className="flex gap-2 items-center">
-            {fiscalConnected && (
-              <Badge variant="outline" className="bg-green-50 text-xs text-green-700">
-                ЭВОТОР подключен
-              </Badge>
-            )}
             {!dbConnected && (
               <Badge variant="outline" className="bg-red-50 text-xs text-red-700">
                 БД не подключена
