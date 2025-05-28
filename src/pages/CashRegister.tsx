@@ -3,9 +3,20 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getProducts, addSale } from '@/services/supabaseService';
-import { getCurrentShift, openShift, closeShift, updateShiftStats } from '@/services/supabaseService';
-import { Product, Sale } from '@/lib/supabase';
+import {
+  getProducts,
+  addSale,
+  getCurrentShift,
+  openShift,
+  closeShift,
+  updateShiftStats,
+  Product,
+  Sale,
+  getCustomerByPhone,
+  createOrGetCustomer,
+  updateCustomerBonus,
+  Customer
+} from '@/services/dbService';
 
 interface OrderItem extends Product {
   quantity: number;
@@ -17,11 +28,15 @@ export default function CashRegister() {
   const [order, setOrder] = useState<OrderItem[]>([]);
   const [currentShift, setCurrentShift] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [bonusToUse, setBonusToUse] = useState(0);
+  const [bonusEarned, setBonusEarned] = useState(0);
 
   useEffect(() => {
     loadProducts();
     checkShift();
-    testSupabaseConnection();
+    //testSupabaseConnection();
   }, []);
 
   const loadProducts = async () => {
@@ -50,22 +65,21 @@ export default function CashRegister() {
     }
   };
 
-  const testSupabaseConnection = async () => {
-    try {
-      const data = await getProducts();
-      console.log('Подключение к Supabase успешно:', data);
-      toast({
-        title: "Подключение к Supabase",
-        description: "Подключение успешно установлено",
-      });
-    } catch (error) {
-      console.error('Ошибка подключения к Supabase:', error);
-      toast({
-        title: "Ошибка подключения к Supabase",
-        description: error instanceof Error ? error.message : "Неизвестная ошибка",
-        variant: "destructive",
-      });
-    }
+// const testSupabaseConnection = async () => {
+    //try {
+      //const data = await getProducts();
+      //console.log('Подключение к Supabase успешно:', data);
+      //toast({
+        //title: "Подключение к Supabase",
+        //description: "Подключение успешно установлено",
+      //});
+   //onsole.error('Ошибка подключения к Supabase:', error);
+     // toast({
+        //title: "Ошибка подключения к Supabase",
+        //description: error instanceof Error ? error.message : "Неизвестная ошибка",
+        //variant: "destructive",
+      //});
+    //}
   };
 
   const handleOpenShift = async () => {
@@ -144,6 +158,14 @@ export default function CashRegister() {
     return order.reduce((sum, item) => sum + item.price * item.quantity, 0);
   };
 
+  const handlePhoneChange = (phone: string) => {
+    setCustomerPhone(phone);
+    if (phone.length >= 10) {
+      const found = getCustomerByPhone(phone);
+      setCustomer(found || null);
+    }
+  };
+
   const handleCompleteOrder = async () => {
     if (!currentShift) {
       toast({
@@ -154,8 +176,22 @@ export default function CashRegister() {
       return;
     }
 
+    if (bonusToUse > (customer?.bonus_balance || 0)) {
+      toast({
+        title: "Ошибка",
+        description: "Недостаточно бонусов для списания",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
+      let client = customerPhone ? createOrGetCustomer(customerPhone) : null;
+      const total = calculateTotal();
+      const earned = Math.floor(total * 0.05);
+      setBonusEarned(earned);
+      if (client) updateCustomerBonus(client.phone, earned - bonusToUse);
       const sale: Omit<Sale, 'id' | 'created_at'> = {
         shift_id: currentShift.id,
         items: order.map(item => ({
@@ -163,9 +199,12 @@ export default function CashRegister() {
           quantity: item.quantity,
           price: item.price
         })),
-        total: calculateTotal(),
+        total,
         payment_method: 'cash',
-        status: 'completed'
+        status: 'completed',
+        customer_phone: client ? client.phone : undefined,
+        bonus_applied: bonusToUse,
+        bonus_earned: earned
       };
 
       await addSale(sale);
@@ -175,7 +214,7 @@ export default function CashRegister() {
       const foodCount = order.filter(item => item.category === 'food').length;
       
       await updateShiftStats(currentShift.id, {
-        total_sales: currentShift.total_sales + calculateTotal(),
+        total_sales: currentShift.total_sales + total,
         transactions: currentShift.transactions + 1,
         coffee_count: currentShift.coffee_count + coffeeCount,
         food_count: currentShift.food_count + foodCount

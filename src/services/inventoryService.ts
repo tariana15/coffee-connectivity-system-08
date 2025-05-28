@@ -1,44 +1,27 @@
-
-import { supabase } from './supabaseClient';
+import { getGoods } from './sqliteService';
 import { InventoryItem, Recipe, RecipeIngredient } from "@/types/inventory";
+import Database from 'better-sqlite3';
+
+const db = new Database('kofeinya.db');
 
 // Cached inventory items
 let cachedInventoryItems: InventoryItem[] = [];
 
 // Функция получения всех ингредиентов
 export const getAllInventoryItems = async (): Promise<InventoryItem[]> => {
-  // Return cached items if available
   if (cachedInventoryItems.length > 0) {
     return cachedInventoryItems;
   }
-  
-  const { data, error } = await supabase
-    .from('inventory_items')
-    .select('*');
-    
-  if (error) {
-    console.error('Error fetching inventory items:', error);
-    // Return fallback data
-    return [
-      {
-        id: 1,
-        name: "Кофейные зерна",
-        amount: 12,
-        unit: "кг",
-        status: "normal",
-        minThreshold: 5,
-        criticalThreshold: 2
-      },
-      // ... reduced fallback data
-    ];
-  }
-  
-  // Update status for all items
-  const itemsWithStatus = data.map(item => updateItemStatus(item));
-  
-  // Cache the results
-  cachedInventoryItems = itemsWithStatus;
-  return itemsWithStatus;
+  const data = getGoods();
+  // Преобразуем Good[] в InventoryItem[]
+  cachedInventoryItems = data.map(good => ({
+    ...good,
+    amount: good.quantity, // предполагаем, что quantity = amount
+    status: 'normal', // по умолчанию
+    minThreshold: 0, // если нужно, задайте реальные значения
+    criticalThreshold: 0 // если нужно, задайте реальные значения
+  }));
+  return cachedInventoryItems;
 };
 
 // Функция обновления статуса ингредиента на основе его количества
@@ -52,33 +35,25 @@ export const updateItemStatus = (item: InventoryItem): InventoryItem => {
   }
 };
 
-// Функция для обновления количества ингредиента
+// Функция для обновления количества ингредиента (SQLite)
 export const updateInventoryItem = async (
   itemId: number,
   newAmount: number
 ): Promise<InventoryItem | undefined> => {
-  const { data, error } = await supabase
-    .from('inventory_items')
-    .update({ amount: Math.max(0, newAmount) })
-    .eq('id', itemId)
-    .select()
-    .single();
-    
-  if (error) {
-    console.error('Error updating inventory item:', error);
+  try {
+    db.prepare('UPDATE goods SET quantity = ? WHERE id = ?').run(Math.max(0, newAmount), itemId);
+    const updated = db.prepare('SELECT * FROM goods WHERE id = ?').get(itemId);
+    const updatedItem = updateItemStatus(updated as InventoryItem);
+    if (cachedInventoryItems.length > 0) {
+      cachedInventoryItems = cachedInventoryItems.map(item =>
+        item.id === itemId ? updatedItem : item
+      );
+    }
+    return updatedItem;
+  } catch (error) {
+    console.error('Ошибка обновления ингредиента:', error);
     return undefined;
   }
-  
-  // Update the cached item
-  const updatedItem = updateItemStatus(data);
-  
-  if (cachedInventoryItems.length > 0) {
-    cachedInventoryItems = cachedInventoryItems.map(item => 
-      item.id === itemId ? updatedItem : item
-    );
-  }
-  
-  return updatedItem;
 };
 
 // Функция для вычитания ингредиентов из запаса при продаже

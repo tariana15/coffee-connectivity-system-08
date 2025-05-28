@@ -6,19 +6,6 @@ import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 // Предварительное кэширование статических ресурсов
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Кэширование API запросов к Supabase
-registerRoute(
-  ({ url }) => url.href.includes('supabase.co'),
-  new NetworkFirst({
-    cacheName: 'api-cache',
-    plugins: [
-      new CacheableResponsePlugin({
-        statuses: [0, 200],
-      }),
-    ],
-  })
-);
-
 // Обработка push-уведомлений
 self.addEventListener('push', (event) => {
   if (event.data) {

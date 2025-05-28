@@ -1,27 +1,19 @@
-import { supabase } from '@/lib/supabase';
-import { NextApiRequest, NextApiResponse } from 'next';
+import { getProducts } from '@/services/sqliteService';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req, res) {
   try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .limit(1);
-
-    if (error) {
-      throw error;
-    }
-
-    res.status(200).json({ 
-      success: true, 
-      message: 'Подключение к Supabase успешно',
-      data 
+    // Пробуем получить продукты из SQLite
+    const data = getProducts();
+    res.status(200).json({
+      success: true,
+      message: 'Подключение к SQLite успешно',
+      data
     });
   } catch (error) {
-    console.error('Ошибка подключения к Supabase:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Ошибка подключения к Supabase',
+    console.error('Ошибка подключения к SQLite:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка подключения к SQLite',
       error: error instanceof Error ? error.message : 'Неизвестная ошибка'
     });
   }

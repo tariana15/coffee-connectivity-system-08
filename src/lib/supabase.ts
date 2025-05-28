@@ -1,21 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Типы для таблиц
-export interface Product {
-  id: string;
-  name: string;
-  category: string;
-  quantity: number;
-  unit: string;
-  price: number;
-  created_at: string;
-}
-
 export interface Recipe {
   id: string;
   drink_type: string;
