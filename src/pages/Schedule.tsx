@@ -69,19 +69,6 @@ const Schedule = () => {
     localStorage.setItem("coffeeShopSchedule", JSON.stringify(updatedEmployees));
   };
 
-  const sendMessage = () => {
-    toast({
-      title: "Сообщение отправлено",
-      description: "Ваше сообщение отправлено в чат кофейни"
-    });
-    
-    addNotification({
-      title: "Новое сообщение в чате",
-      message: `${user?.name}: Изменения в графике на завтра`,
-      type: "info"
-    });
-  };
-
   // Helper to generate current month days
   const getDaysInMonth = () => {
     const currentDate = new Date();
@@ -366,13 +353,6 @@ const Schedule = () => {
                           <p>Нет назначенных смен на этот день</p>
                         </div>
                       )}
-                    </div>
-                    
-                    <div className="flex flex-col space-y-2">
-                      <Button onClick={sendMessage}>
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        Отправить сообщение в чат
-                      </Button>
                     </div>
                   </div>
                 </CardContent>

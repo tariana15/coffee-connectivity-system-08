@@ -1,5 +1,8 @@
 import Database from 'better-sqlite3';
 import { DB_PATH } from './dbPath';
+import bcrypt from 'bcryptjs';
+import { User, UserRole } from '@/types/auth';
+
 const db = new Database(DB_PATH);
 
 export interface Good {
@@ -147,4 +150,45 @@ export function createOrGetCustomer(phone: string): Customer {
 export function updateCustomerBonus(phone: string, delta: number): Customer {
   db.prepare('UPDATE customers SET bonus_balance = bonus_balance + ? WHERE phone = ?').run(delta, phone);
   return getCustomerByPhone(phone);
+}
+
+// Функции для работы с пользователями
+export function getUserByEmail(email: string): User | null {
+  return db.prepare('SELECT * FROM employees WHERE email = ?').get(email);
+}
+
+export function createUser(userData: Omit<User, "id"> & { password: string }): User {
+  const { password, ...userWithoutPassword } = userData;
+  const password_hash = bcrypt.hashSync(password, 10);
+  
+  const stmt = db.prepare(`
+    INSERT INTO employees (
+      name, email, password_hash, role, avatar_url, 
+      coffee_shop_name, employee_count, hired_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+  `);
+  
+  const info = stmt.run(
+    userWithoutPassword.name,
+    userWithoutPassword.email,
+    password_hash,
+    userWithoutPassword.role,
+    userWithoutPassword.avatarUrl,
+    userWithoutPassword.coffeeShopName,
+    userWithoutPassword.employeeCount || 0
+  );
+  
+  return db.prepare('SELECT * FROM employees WHERE id = ?').get(info.lastInsertRowid);
+}
+
+export function getShopEmployees(coffeeShopName: string): User[] {
+  return db.prepare('SELECT * FROM employees WHERE coffee_shop_name = ?').all(coffeeShopName);
+}
+
+export function updateEmployeeCount(userId: number, newCount: number): void {
+  db.prepare('UPDATE employees SET employee_count = ? WHERE id = ?').run(newCount, userId);
+}
+
+export function verifyPassword(password: string, hash: string): boolean {
+  return bcrypt.compareSync(password, hash);
 } 

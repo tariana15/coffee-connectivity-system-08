@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { AuthContextType, User, UserRole } from "@/types/auth";
+import { getUserByEmail, verifyPassword, createUser, getShopEmployees as fetchShopEmployees, updateEmployeeCount } from "@/services/sqliteService";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Demo users
 const demoUsers: User[] = [
   {
-    id: "1",
+    id: 1,
     name: "Владелец Кофейни",
     email: "owner@example.com",
     role: "owner" as UserRole,
@@ -15,7 +16,7 @@ const demoUsers: User[] = [
     employeeCount: 5
   },
   {
-    id: "2",
+    id: 2,
     name: "Бариста Анна",
     email: "employee@example.com",
     role: "employee" as UserRole,
@@ -23,7 +24,7 @@ const demoUsers: User[] = [
     coffeeShopName: "Уютная Кофейня"
   },
   {
-    id: "3",
+    id: 3,
     name: "Менеджер Иван",
     email: "manager@example.com",
     role: "manager" as UserRole,
@@ -38,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user
+    // Проверяем сохраненного пользователя
     const storedUser = localStorage.getItem("coffeeUser");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
@@ -49,25 +50,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // First check if user exists in localStorage
-      const users = localStorage.getItem("coffeeShopUsers");
-      const allUsers = users ? JSON.parse(users) : [];
-      
-      // Check first in our regular users
-      let foundUser = allUsers.find((u: User) => u.email === email);
-      
-      // If not found, check in demo users
-      if (!foundUser) {
-        foundUser = demoUsers.find(u => u.email === email);
-      }
+      const foundUser = getUserByEmail(email);
       
       if (!foundUser) {
         throw new Error("Неверный email или пароль");
       }
+
+      const isValidPassword = verifyPassword(password, foundUser.password_hash || '');
+      if (!isValidPassword) {
+        throw new Error("Неверный email или пароль");
+      }
       
+      localStorage.setItem("employeeId", foundUser.id.toString());
       setUser(foundUser);
       localStorage.setItem("coffeeUser", JSON.stringify(foundUser));
     } catch (error) {
@@ -81,52 +75,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (userData: Omit<User, "id"> & { password: string }) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const newUser = createUser(userData);
       
-      // Check if we already have users registered with this coffee shop
-      const allUsers = localStorage.getItem("coffeeShopUsers");
-      let coffeeShopUsers = allUsers ? JSON.parse(allUsers) : [];
-      
-      // Assign a default avatar URL based on role
-      const avatarUrl = userData.avatarUrl || 
-        (userData.role === "owner" || userData.role === "manager" ? "/avatars/owner.png" : "/avatars/employee.png");
-      
-      const newUser: User = {
-        ...userData,
-        avatarUrl,
-        id: Math.random().toString(36).substring(2, 11)
-      };
-      
-      // Add user to coffee shop users list
-      coffeeShopUsers.push(newUser);
-      
-      localStorage.setItem("coffeeShopUsers", JSON.stringify(coffeeShopUsers));
+      localStorage.setItem("employeeId", newUser.id.toString());
       setUser(newUser);
       localStorage.setItem("coffeeUser", JSON.stringify(newUser));
       
-      // If this is a first-time shop, add a welcome message to the chat
-      const savedMessages = localStorage.getItem("chatMessages");
-      let allMessages = savedMessages ? JSON.parse(savedMessages) : [];
+      // const welcomeMessage = {
+      //   id: `welcome-${newUser.coffeeShopName}`,
+      //   userId: "system",
+      //   userName: "Система",
+      //   content: `Кофейня "${newUser.coffeeShopName}" создана! Приглашайте сотрудников присоединиться, указав то же название кофейни при регистрации.`,
+      //   timestamp: Date.now(),
+      //   coffeeShopName: newUser.coffeeShopName
+      // };
       
-      // Check if we have any messages for this coffee shop already
-      const hasShopMessages = allMessages.some(
-        (message: any) => message.coffeeShopName === newUser.coffeeShopName
-      );
-      
-      if (!hasShopMessages) {
-        const welcomeMessage = {
-          id: `welcome-${newUser.coffeeShopName}`,
-          userId: "system",
-          userName: "Система",
-          content: `Кофейня "${newUser.coffeeShopName}" создана! Приглашайте сотрудников присоединиться, указав то же название кофейни при регистрации.`,
-          timestamp: Date.now(),
-          coffeeShopName: newUser.coffeeShopName
-        };
-        
-        allMessages.push(welcomeMessage);
-        localStorage.setItem("chatMessages", JSON.stringify(allMessages));
-      }
+      // await addMessageToDatabase(welcomeMessage);
     } catch (error) {
       console.error("Register error:", error);
       throw error;
@@ -142,52 +106,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("Вы должны быть авторизованы для добавления сотрудников");
       }
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Get all users
-      const allUsers = localStorage.getItem("coffeeShopUsers");
-      let coffeeShopUsers = allUsers ? JSON.parse(allUsers) : [];
-      
-      // Check if user with this email already exists
-      const existingUser = coffeeShopUsers.find((u: User) => u.email === userData.email);
-      if (existingUser) {
-        throw new Error("Пользователь с таким email уже существует");
-      }
-      
-      // Create new user with same coffee shop name as current user
-      const avatarUrl = userData.avatarUrl || 
-        (userData.role === "manager" ? "/avatars/owner.png" : "/avatars/employee.png");
-      
-      const newUser: User = {
+      const newUser = createUser({
         ...userData,
         coffeeShopName: user.coffeeShopName,
-        avatarUrl,
-        id: Math.random().toString(36).substring(2, 11)
-      };
+      });
       
-      // Add user to coffee shop users list
-      coffeeShopUsers.push(newUser);
-      
-      // Update employee count for owner
       if (user.role === "owner" || user.role === "manager") {
+        const newCount = (user.employeeCount || 0) + 1;
+        updateEmployeeCount(user.id, newCount);
+        
         const updatedUser = {
           ...user,
-          employeeCount: (user.employeeCount || 0) + 1
+          employeeCount: newCount
         };
         
-        // Update current user in state and storage
         setUser(updatedUser);
         localStorage.setItem("coffeeUser", JSON.stringify(updatedUser));
-        
-        // Update in the full list
-        const userIndex = coffeeShopUsers.findIndex((u: User) => u.id === user.id);
-        if (userIndex >= 0) {
-          coffeeShopUsers[userIndex] = updatedUser;
-        }
       }
-      
-      localStorage.setItem("coffeeShopUsers", JSON.stringify(coffeeShopUsers));
       
       return newUser;
     } catch (error) {
@@ -203,19 +138,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return [];
     }
     
-    // Get all users
-    const allUsers = localStorage.getItem("coffeeShopUsers");
-    const coffeeShopUsers = allUsers ? JSON.parse(allUsers) : [];
-    
-    // Filter users by coffee shop name
-    return coffeeShopUsers.filter((u: User) => 
-      u.coffeeShopName === user.coffeeShopName && u.id !== user.id
-    );
+    return fetchShopEmployees(user.coffeeShopName);
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem("coffeeUser");
+    localStorage.removeItem("employeeId");
   };
 
   return (

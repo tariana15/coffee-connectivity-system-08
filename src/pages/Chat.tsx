@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef } from "react";
+// import React, { useState, useEffect, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -227,4 +226,4 @@ const Chat = () => {
   );
 };
 
-export default Chat;
+// export default Chat;

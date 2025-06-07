@@ -48,18 +48,17 @@ export const updateShiftStatsAsync = async (
 
 export { getCustomerByPhone, createOrGetCustomer, updateCustomerBonus };
 
-// Импорт для работы с чатом
-const sendReportToChat = (report: string, user: any) => {
-  const message = {
-    id: Date.now().toString(),
-    userId: 'system',
-    userName: 'Система',
-    content: report,
-    timestamp: Date.now(),
-    coffeeShopName: user?.coffeeShopName || 'default'
-  };
-  const savedMessages = localStorage.getItem('chatMessages');
-  let allMessages = savedMessages ? JSON.parse(savedMessages) : [];
-  allMessages = [...allMessages, message];
-  localStorage.setItem('chatMessages', JSON.stringify(allMessages));
-}; 
+// const sendReportToChat = (report: string, user: any) => {
+//   const message = {
+//     id: Date.now().toString(),
+//     userId: 'system',
+//     userName: 'Система',
+//     content: report,
+//     timestamp: Date.now(),
+//     coffeeShopName: user?.coffeeShopName || 'default'
+//   };
+//   const savedMessages = localStorage.getItem('chatMessages');
+//   let allMessages = savedMessages ? JSON.parse(savedMessages) : [];
+//   allMessages = [...allMessages, message];
+//   localStorage.setItem('chatMessages', JSON.stringify(allMessages));
+// }; 
