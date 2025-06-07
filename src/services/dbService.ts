@@ -19,7 +19,7 @@ import {
   Customer
 } from './sqliteService';
 
-export type { Product, Sale, Customer } from './sqliteService';
+export type { Product, Sale, Customer, Good } from './sqliteService';
 
 // Работа с товарами
 export const getProductsAsync = async (): Promise<Good[]> => getGoods();
