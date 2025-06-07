@@ -1,0 +1,1 @@
+export const DB_PATH = 'C:/Users/tatia/source/repos/Кофейня-коннективити/merge/coffee-connectivity-system-08/kofeinya.db'; 

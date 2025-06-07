@@ -1,8 +1,8 @@
 import { getGoods } from './sqliteService';
 import { InventoryItem, Recipe, RecipeIngredient } from "@/types/inventory";
 import Database from 'better-sqlite3';
-
-const db = new Database('kofeinya.db');
+import { DB_PATH } from './dbPath';
+const db = new Database(DB_PATH);
 
 // Cached inventory items
 let cachedInventoryItems: InventoryItem[] = [];
