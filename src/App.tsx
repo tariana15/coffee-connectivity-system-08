@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,7 +21,7 @@ import NotFound from "./pages/NotFound";
 import Invoices from "./pages/Invoices";
 import Bonuses from "./pages/Bonuses";
 import Salary from "./pages/Salary";
-// import Chat from "./pages/Chat";
+import Chat from "./pages/Chat";
 import Index from "./pages/Index";
 import SalesAnalytics from "./pages/SalesAnalytics";
 
@@ -121,14 +122,14 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
-              {/* <Route 
+              <Route 
                 path="/chat" 
                 element={
                   <ProtectedRoute>
                     <Chat />
                   </ProtectedRoute>
                 } 
-              /> */}
+              />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
