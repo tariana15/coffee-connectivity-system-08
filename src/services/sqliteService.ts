@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
-import { DB_PATH } from './dbPath';
-const db = new Database(DB_PATH);
+
+const db = new Database('kofeinya.db'); // путь к вашей базе
 
 export interface Good {
   id: number;
