@@ -1,4 +1,5 @@
-import { getProducts } from './sqliteService';
+
+import { getProductsAsync } from './dbService';
 
 export interface MenuItem {
   id: number;
@@ -15,8 +16,14 @@ export const getMenuItems = async (): Promise<MenuItem[]> => {
    return cachedMenuItems;
   }
   try {
-    const data = getProducts();
-    cachedMenuItems = data as MenuItem[];
+    const data = await getProductsAsync();
+    // Преобразуем Product[] в MenuItem[]
+    cachedMenuItems = data.map(product => ({
+      id: parseInt(product.id),
+      name: product.name,
+      price: product.price,
+      category: product.category
+    }));
     return cachedMenuItems;
   } catch (error) {
     console.error('Exception fetching menu items:', error);

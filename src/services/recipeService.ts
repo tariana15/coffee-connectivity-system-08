@@ -1,4 +1,5 @@
-import { getProducts } from './sqliteService';
+
+import { getProductsAsync } from './dbService';
 import { Recipe } from "@/types/inventory";
 
 // Cached recipes
@@ -21,9 +22,20 @@ export const getAllRecipes = async (): Promise<Recipe[]> => {
   if (cachedRecipes.length > 0) {
     return cachedRecipes;
   }
-  const data = getProducts();
-  cachedRecipes = data as Recipe[];
-  return cachedRecipes;
+  try {
+    const data = await getProductsAsync();
+    // Преобразуем Product[] в Recipe[]
+    cachedRecipes = data.map(product => ({
+      id: parseInt(product.id),
+      name: product.name,
+      category: product.category,
+      ingredients: [] // Пустой массив ингредиентов, нужно будет настроить отдельно
+    }));
+    return cachedRecipes;
+  } catch (error) {
+    console.error('Error fetching recipes:', error);
+    return [];
+  }
 };
 
 // Function to refresh cache when needed
