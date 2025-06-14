@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,7 @@ import {
   getSalesAsync,
   saveEmployeeSalary
 } from '@/services/dbService';
+import { initializeApp } from '@/services/appInitService';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface OrderItem extends Product {
@@ -38,36 +38,80 @@ export default function CashRegister() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [bonusToUse, setBonusToUse] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadInitialData();
+    initializeApplication();
   }, []);
 
   useEffect(() => {
-    if (currentShift) {
+    if (currentShift && isInitialized) {
       loadSales();
     }
-  }, [currentShift]);
+  }, [currentShift, isInitialized]);
+
+  const initializeApplication = async () => {
+    try {
+      setLoading(true);
+      setInitError(null);
+      
+      console.log('Инициализируем приложение...');
+      const initResult = await initializeApp();
+      
+      if (!initResult.success) {
+        throw new Error(initResult.error || 'Ошибка инициализации');
+      }
+      
+      await loadInitialData();
+      setIsInitialized(true);
+      
+      toast({
+        title: "Приложение готово",
+        description: "Подключение к базе данных установлено",
+      });
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      setInitError(errorMessage);
+      
+      console.error('Ошибка инициализации:', error);
+      toast({
+        title: "Ошибка подключения",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadInitialData = async () => {
     try {
-      setLoading(true);
+      console.log('Загружаем начальные данные...');
+      
       const [productsData, shiftData] = await Promise.all([
-        getProductsAsync(),
-        getCurrentShiftAsync()
+        getProductsAsync().catch(error => {
+          console.error('Ошибка загрузки продуктов:', error);
+          return [];
+        }),
+        getCurrentShiftAsync().catch(error => {
+          console.error('Ошибка получения смены:', error);
+          return null;
+        })
       ]);
       
       setProducts(productsData);
       setCurrentShift(shiftData);
+      
+      console.log(`Загружено ${productsData.length} продуктов`);
+      if (shiftData) {
+        console.log('Найдена открытая смена:', shiftData.id);
+      }
+      
     } catch (error) {
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить данные",
-        variant: "destructive",
-      });
-      console.error('Error loading initial data:', error);
-    } finally {
-      setLoading(false);
+      console.error('Критическая ошибка загрузки данных:', error);
+      throw error;
     }
   };
 
@@ -75,30 +119,41 @@ export default function CashRegister() {
     if (!currentShift) return;
     
     try {
+      console.log('Загружаем продажи для смены...');
       const salesData = await getSalesAsync(currentShift.id);
       setSales(salesData);
     } catch (error) {
-      console.error('Error loading sales:', error);
+      console.error('Ошибка загрузки продаж:', error);
+      toast({
+        title: "Предупреждение",
+        description: "Не удалось загрузить историю продаж",
+        variant: "destructive",
+      });
     }
   };
 
   const handleOpenShift = async () => {
     try {
       setLoading(true);
+      console.log('Пользователь открывает новую смену...');
+      
       const shift = await openShiftAsync();
       setCurrentShift(shift);
       setSales([]);
+      
       toast({
         title: "Смена открыта",
         description: "Можно начинать работу",
       });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      console.error('Ошибка открытия смены:', error);
+      
       toast({
         title: "Ошибка",
-        description: "Не удалось открыть смену",
+        description: errorMessage,
         variant: "destructive",
       });
-      console.error('Error opening shift:', error);
     } finally {
       setLoading(false);
     }
@@ -196,7 +251,8 @@ export default function CashRegister() {
         const found = await getCustomerByPhone(phone);
         setCustomer(found);
       } catch (error) {
-        console.error('Error finding customer:', error);
+        console.error('Ошибка поиска клиента:', error);
+        // Не показываем ошибку пользователю, просто логируем
       }
     }
   };
@@ -290,12 +346,30 @@ export default function CashRegister() {
     }
   };
 
-  if (loading && !products.length) {
+  // Показываем экран загрузки при инициализации
+  if (loading && !isInitialized) {
     return (
       <div className="container mx-auto p-4 flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Загрузка данных...</p>
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p>Подключение к базе данных...</p>
+          <p className="text-sm text-gray-500">Пожалуйста, подождите</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Показываем ошибку инициализации
+  if (initError) {
+    return (
+      <div className="container mx-auto p-4 flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <div className="text-red-500 text-6xl">⚠️</div>
+          <h2 className="text-xl font-semibold">Ошибка подключения</h2>
+          <p className="text-gray-600">{initError}</p>
+          <Button onClick={initializeApplication}>
+            Попробовать снова
+          </Button>
         </div>
       </div>
     );
