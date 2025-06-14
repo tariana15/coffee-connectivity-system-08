@@ -1,3 +1,4 @@
+
 import { supabase } from './supabaseClient';
 
 export interface Product {
@@ -213,9 +214,17 @@ export const createOrGetCustomer = async (phone: string): Promise<Customer> => {
 };
 
 export const updateCustomerBonus = async (phone: string, delta: number): Promise<Customer> => {
+  // First get the current customer
+  const customer = await getCustomerByPhone(phone);
+  if (!customer) throw new Error('Customer not found');
+  
+  // Calculate new bonus balance
+  const newBalance = customer.bonus_balance + delta;
+  
+  // Update with the new balance
   const { data, error } = await supabase
     .from('customers')
-    .update({ bonus_balance: supabase.raw(`bonus_balance + ${delta}`) })
+    .update({ bonus_balance: newBalance })
     .eq('phone', phone)
     .select()
     .single();
