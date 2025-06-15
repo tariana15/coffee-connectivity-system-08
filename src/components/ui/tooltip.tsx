@@ -4,7 +4,21 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
 
-const TooltipProvider = TooltipPrimitive.Provider
+// Create a safe TooltipProvider that checks if React is available
+const TooltipProvider = React.forwardRef<
+  React.ElementRef<typeof TooltipPrimitive.Provider>,
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Provider>
+>((props, ref) => {
+  // Check if React hooks are available
+  if (!React || typeof React.useState !== 'function') {
+    console.warn('React hooks not available, skipping TooltipProvider');
+    return <>{props.children}</>;
+  }
+  
+  return <TooltipPrimitive.Provider ref={ref} {...props} />;
+});
+
+TooltipProvider.displayName = "TooltipProvider";
 
 const Tooltip = TooltipPrimitive.Root
 
