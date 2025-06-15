@@ -4,30 +4,27 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
 
-// Create a robust TooltipProvider that handles React initialization issues
+// Safe TooltipProvider that completely avoids Radix when React is not ready
 const TooltipProvider = (props: React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Provider>) => {
-  // Add multiple checks to ensure React is fully available
-  if (!React || !React.useState || !React.useEffect || !React.createContext) {
-    console.warn('React not fully initialized, rendering children without tooltip functionality');
-    // Return children wrapped in a simple div to maintain structure
-    if (React && React.createElement) {
-      return React.createElement('div', { className: 'tooltip-fallback' }, props.children);
-    }
-    // Fallback for when even React.createElement is not available
+  // Check if React and its essential methods are available
+  if (!React || !React.useState || !React.useEffect || !React.createContext || !React.createElement) {
+    console.warn('React not initialized, skipping TooltipProvider');
     return props.children;
   }
   
-  // Additional safety check - try to detect if we're in a valid React render context
+  // Additional check for React's internal state
   try {
-    // Test if React context is working by attempting to access current fiber
-    if (typeof window !== 'undefined' && !(window as any).React) {
-      console.warn('React not available on window, using fallback');
+    // Try to access React's internal dispatcher to ensure hooks are available
+    const reactInternals = (React as any).__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+    if (!reactInternals || !reactInternals.ReactCurrentDispatcher) {
+      console.warn('React internals not ready, skipping TooltipProvider');
       return React.createElement('div', { className: 'tooltip-fallback' }, props.children);
     }
     
+    // Only render the actual TooltipProvider if React is fully ready
     return React.createElement(TooltipPrimitive.Provider, props);
   } catch (error) {
-    console.warn('TooltipProvider failed during render:', error);
+    console.warn('TooltipProvider initialization failed:', error);
     return React.createElement('div', { className: 'tooltip-fallback' }, props.children);
   }
 };
