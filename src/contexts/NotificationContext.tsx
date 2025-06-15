@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext } from "react";
 import { Notification, NotificationContextType } from "@/types/notification";
 import { toast } from "@/hooks/use-toast";
 
@@ -34,7 +34,25 @@ const demoNotifications: Notification[] = [
 ];
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [notifications, setNotifications] = useState<Notification[]>(demoNotifications);
+  // Check if React and its essential methods are available
+  if (!React || !React.useState || !React.useEffect || !React.createContext || !React.createElement) {
+    console.warn('React not initialized in NotificationProvider, skipping Notification context');
+    return children;
+  }
+
+  // Additional check for React's internal state
+  try {
+    const reactInternals = (React as any).__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+    if (!reactInternals || !reactInternals.ReactCurrentDispatcher) {
+      console.warn('React internals not ready in NotificationProvider, using fallback');
+      return React.createElement('div', { className: 'notification-fallback' }, children);
+    }
+  } catch (error) {
+    console.warn('NotificationProvider initialization failed:', error);
+    return React.createElement('div', { className: 'notification-fallback' }, children);
+  }
+
+  const [notifications, setNotifications] = React.useState<Notification[]>(demoNotifications);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -45,9 +63,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       read: false,
       createdAt: new Date()
     };
-    
     setNotifications(prev => [newNotification, ...prev]);
-    
     // Show toast for new notification
     toast({
       title: notification.title,
@@ -57,7 +73,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
+    setNotifications(notifications.map(n =>
       n.id === id ? { ...n, read: true } : n
     ));
   };
@@ -71,14 +87,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   return (
-    <NotificationContext.Provider 
-      value={{ 
-        notifications, 
-        unreadCount, 
-        addNotification, 
-        markAsRead, 
-        markAllAsRead, 
-        removeNotification 
+    <NotificationContext.Provider
+      value={{
+        notifications,
+        unreadCount,
+        addNotification,
+        markAsRead,
+        markAllAsRead,
+        removeNotification
       }}
     >
       {children}
