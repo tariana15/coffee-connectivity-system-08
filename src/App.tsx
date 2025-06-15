@@ -28,7 +28,7 @@ import SalesAnalytics from "./pages/SalesAnalytics";
 const queryClient = new QueryClient();
 
 const App = () => {
-  console.log("App component rendering");
+  console.log("App component rendering, React available:", !!React);
   
   return (
     <QueryClientProvider client={queryClient}>

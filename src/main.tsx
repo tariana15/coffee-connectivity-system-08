@@ -4,12 +4,20 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
+console.log("Main.tsx loading, React version:", React.version);
+
 const container = document.getElementById("root");
 if (!container) {
   throw new Error("Root element not found");
 }
 
 const root = createRoot(container);
+
+// Ensure React is properly available globally
+if (typeof window !== 'undefined') {
+  (window as any).React = React;
+}
+
 root.render(
   <React.StrictMode>
     <App />
