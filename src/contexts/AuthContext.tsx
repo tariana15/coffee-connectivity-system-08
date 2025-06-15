@@ -34,6 +34,24 @@ const demoUsers: User[] = [
 ];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Safety check to ensure React is properly initialized before using hooks
+  if (!React || !React.useState || !React.useEffect || !React.createContext) {
+    console.warn('React not initialized in AuthProvider, returning children without auth context');
+    return React.createElement('div', { className: 'auth-fallback' }, children);
+  }
+
+  // Additional check for React's internal state
+  try {
+    const reactInternals = (React as any).__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+    if (!reactInternals || !reactInternals.ReactCurrentDispatcher) {
+      console.warn('React internals not ready in AuthProvider, using fallback');
+      return React.createElement('div', { className: 'auth-fallback' }, children);
+    }
+  } catch (error) {
+    console.warn('AuthProvider initialization failed:', error);
+    return React.createElement('div', { className: 'auth-fallback' }, children);
+  }
+
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
