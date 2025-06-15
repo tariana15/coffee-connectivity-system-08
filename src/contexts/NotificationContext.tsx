@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useState } from "react";
 import { Notification, NotificationContextType } from "@/types/notification";
 import { toast } from "@/hooks/use-toast";
 
@@ -34,25 +34,7 @@ const demoNotifications: Notification[] = [
 ];
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Check if React and its essential methods are available
-  if (!React || !React.useState || !React.useEffect || !React.createContext || !React.createElement) {
-    console.warn('React not initialized in NotificationProvider, skipping Notification context');
-    return children;
-  }
-
-  // Additional check for React's internal state
-  try {
-    const reactInternals = (React as any).__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
-    if (!reactInternals || !reactInternals.ReactCurrentDispatcher) {
-      console.warn('React internals not ready in NotificationProvider, using fallback');
-      return React.createElement('div', { className: 'notification-fallback' }, children);
-    }
-  } catch (error) {
-    console.warn('NotificationProvider initialization failed:', error);
-    return React.createElement('div', { className: 'notification-fallback' }, children);
-  }
-
-  const [notifications, setNotifications] = React.useState<Notification[]>(demoNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>(demoNotifications);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -109,3 +91,4 @@ export const useNotifications = (): NotificationContextType => {
   }
   return context;
 };
+
