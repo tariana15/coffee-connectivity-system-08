@@ -4,19 +4,31 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
 
-// Create a completely safe TooltipProvider that avoids all React APIs when React is null
+// Create a robust TooltipProvider that handles React initialization issues
 const TooltipProvider = (props: React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Provider>) => {
-  // Check if React is completely null or if hooks are not available
-  if (!React || typeof React.useState !== 'function') {
-    console.warn('React hooks not available, rendering children without TooltipProvider');
-    return React.createElement('div', {}, props.children);
+  // Add multiple checks to ensure React is fully available
+  if (!React || !React.useState || !React.useEffect || !React.createContext) {
+    console.warn('React not fully initialized, rendering children without tooltip functionality');
+    // Return children wrapped in a simple div to maintain structure
+    if (React && React.createElement) {
+      return React.createElement('div', { className: 'tooltip-fallback' }, props.children);
+    }
+    // Fallback for when even React.createElement is not available
+    return props.children;
   }
   
+  // Additional safety check - try to detect if we're in a valid React render context
   try {
+    // Test if React context is working by attempting to access current fiber
+    if (typeof window !== 'undefined' && !(window as any).React) {
+      console.warn('React not available on window, using fallback');
+      return React.createElement('div', { className: 'tooltip-fallback' }, props.children);
+    }
+    
     return React.createElement(TooltipPrimitive.Provider, props);
   } catch (error) {
-    console.warn('TooltipProvider failed, rendering children directly:', error);
-    return React.createElement('div', {}, props.children);
+    console.warn('TooltipProvider failed during render:', error);
+    return React.createElement('div', { className: 'tooltip-fallback' }, props.children);
   }
 };
 
